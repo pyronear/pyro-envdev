@@ -44,6 +44,11 @@ groups = pd.read_csv(f"/data/csv/API_DATA{sub_path} - groups.csv")
 sites = pd.read_csv(f"/data/csv/API_DATA{sub_path} - sites.csv")
 users = pd.read_csv(f"/data/csv/API_DATA{sub_path} - users.csv")
 
+print(devices)
+print(groups)
+print(sites)
+print(users)
+
 key = "name"
 for group in groups[key]:
     if group != "admins":

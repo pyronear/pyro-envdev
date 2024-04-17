@@ -5,6 +5,10 @@ from typing import Any, Dict, Optional
 import pandas as pd
 import secrets
 import os
+import sys
+import logging
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
@@ -51,16 +55,16 @@ groups = pd.read_csv(f"/data/csv/API_DATA{sub_path} - groups.csv")
 sites = pd.read_csv(f"/data/csv/API_DATA{sub_path} - sites.csv")
 users = pd.read_csv(f"/data/csv/API_DATA{sub_path} - users.csv")
 
-print(devices)
-print(groups)
-print(sites)
-print(users)
+logging.info(f"Devices : {devices}")
+logging.info(f"Groups : {groups}")
+logging.info(f"Sites : {sites}")
+logging.info(f"Users : {users}")
 
 key = "name"
 for group in groups[key]:
     if group != "admins":
         payload = dict(name=group)
-        print(payload)
+        logging.info(f"saving group : {payload}")
         api_request("post", f"{api_url}/groups/", superuser_auth, payload)
 
 registered_groups = api_request("get", f"{api_url}/groups/", superuser_auth)
@@ -78,7 +82,7 @@ for i in range(len(users)):
     payload = dict(
         login=data["login"], password=password, scope=data["scope"], group_id=group_id
     )
-    print(payload)
+    logging.info(f"saving user : {payload}")
     api_request("post", f"{api_url}/users/", superuser_auth, payload)
 
 api_users = api_request("get", f"{api_url}/users/", superuser_auth)
@@ -96,7 +100,7 @@ for i in range(len(sites)):
         lon=float(data["lon"]),
         group_id=group_id,
     )
-    print(payload)
+    logging.info(f"saving site : {payload}")
     api_request("post", f"{api_url}/sites/", superuser_auth, payload)
 
 
@@ -121,7 +125,5 @@ for i in range(len(devices)):
         scope=data["scope"],
         group_id=group_id,
     )
-    print(payload)
+    logging.info(f"saving device : {payload}")
     r = api_request("post", f"{api_url}/devices/", superuser_auth, payload)
-
-# TODO : logging & testing

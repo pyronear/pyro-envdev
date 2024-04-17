@@ -34,3 +34,12 @@ jobs:
           echo "Some containers are unhealthy"
           exit 1
         fi
+
+    - name: Check container logs for errors
+      run: |-
+        docker-compose logs --tail=100 | grep -i -E "error|exception"
+        if [ $? -eq 0 ]; then
+          echo "Found errors in logs"
+          exit 1
+        else
+          echo "No errors found in logs

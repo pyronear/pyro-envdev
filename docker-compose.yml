@@ -20,6 +20,11 @@ services:
     - S3_REGION=us-east-1
     - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     - TELEGRAM_TEST_CHAT_ID=${TELEGRAM_TEST_CHAT_ID}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro-api:8080/status' -H 'accept: application/json'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy
@@ -36,8 +41,8 @@ services:
     healthcheck:
       test: [CMD-SHELL, sh -c 'pg_isready -U dummy_pg_user -d dummy_pg_db']
       interval: 10s
-      timeout: 3s
-      retries: 3
+      timeout: 10s
+      retries: 5
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
     image: localstack/localstack:1.4.0
@@ -48,7 +53,7 @@ services:
     - EDGE_PORT=4566
     - SERVICES=s3
     healthcheck:
-      test: [CMD-SHELL, awslocal --endpoint-url=http://localhost:4566 s3 ls]
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -69,6 +74,9 @@ services:
       options:
         max-size: 100m
         max-file: '5'
+    depends_on:
+      pyro-api:
+        condition: service_healthy
   promtail:
     image: grafana/promtail:2.7.3
     ports:
@@ -93,7 +101,5 @@ services:
     - ./data/:/data/
     command: sh -c 'python /usr/local/bin/init_script.py && exit 0 || exit 1'
     depends_on:
-    - pyro-api
-
-# Todo : add an healthcheck to the API
-# Todo : check how to use localstack & promtail 
+      pyro-api:
+        condition: service_healthy

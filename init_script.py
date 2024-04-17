@@ -12,7 +12,6 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
-
     response = requests.post(
         f"{api_url}/login/access-token",
         data={"username": login, "password": pwd},
@@ -28,7 +27,6 @@ def api_request(
     headers=Dict[str, str],
     payload: Optional[Dict[str, Any]] = None,
 ):
-
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)

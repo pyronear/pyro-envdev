@@ -1,82 +1,40 @@
-# pyro-devops
+**README**
 
-Deployment and infrastructure management
-
-  
-
-## Getting started
-
-## Structure
-
-The file docker-swarm.yml is used for the docker swarm
-The folder nginx is a demo for a image of a reverse proxy with nginx 
+This Docker Compose configuration sets up a development environment for Pyronear's API along with supporting services like a PostgreSQL database, LocalStack for S3 emulation, Pyro Engine, and Promtail for log shipping.
 
 ### Prerequisites
+- Docker and Docker Compose installed on your system.
 
-  
-- Docker swarm
+### Usage
 
-  
+ Start the Docker services using the following command:
+    ```
+    docker-compose up -d
+    ```
 
-### Installation
+Currently the initialisation script is failing, so you should launch it again with the command :
 
-https://docs.docker.com/get-docker/
+    ```
+    docker-compose start init_script
+    ```
 
-https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/
+### Services
+1. **pyro-api**: Runs the Pyronear API using uvicorn.
+2. **db**: PostgreSQL database for the API.
+3. **localstack**: Emulates AWS S3 using LocalStack.
+4. **pyro-engine**: Pyro Engine service.
+5. **promtail**: Log shipper for collecting logs from Docker containers.
 
-  
-## Security good practice
-https://docs.docker.com/engine/install/linux-postinstall/
-Log your infrastructure and your containers (portainer,...) 
-Run your ssh/administration on a private network (with bastion + vpn)
-https://www.stackrox.com/post/2019/09/docker-security-101/
-AppArmor/ SELinux,failtoban, iptable, waf
-Check your SLA, IT Disastery Recovery process
-Vulnerability assessment and management (VAM)
-Identity and Access Management
+### Accessing the API
+Once the services are up and running, you can access the Pyronear API at `http://localhost:8080`.
 
-## Usage
+### Monitoring Logs
+Promtail collects logs from Docker containers. You can access the Promtail dashboard at `http://localhost:8300`.
 
-
-
-
-Export the variables/secret in your env file (if you don't have a Vault) 
+### Cleanup
+To stop and remove the Docker services, run:
 ```
-export BUCKET_MEDIA_FOLDER=media
-...
-```
-  
-If needed build your images (for exemple the mynginx image in the folder nginx) and push it in the local registry
-
-```
-docker run -d -p 5000:5000 --restart=always --name registry registry:2 #start the local registry
-
-docker build -t pyro/mynginx .
-
-docker image tag pyro/mynginx localhost:5000/mynginx
-
-docker push localhost:5000/mynginx:latest
-
-docker pull localhost:5000/mynginx
+docker-compose down
 ```
 
-and after deploy your docker swarm
-```
-
-docker stack deploy -c docker-swarm.yml my_node
-
-```
-
-You can check that the service is running with
-
-
-
-```
-
-docker service ls
-
-docker ps
-
-docker service logs xxxxxx
-
-```
+This Docker Compose setup provides a comprehensive development environment for working with Pyronear's API and supporting services.

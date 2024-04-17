@@ -4,6 +4,7 @@ This Docker Compose configuration sets up a development environment for Pyronear
 
 ### Prerequisites
 - Docker and Docker Compose installed on your system.
+- Precommit hook installed on this repo
 
 ### Usage
 

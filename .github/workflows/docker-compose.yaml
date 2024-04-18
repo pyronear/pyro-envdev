@@ -8,7 +8,11 @@ on:
 jobs:
   docker-compose-up:
     name: Docker Compose Up
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.9]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2

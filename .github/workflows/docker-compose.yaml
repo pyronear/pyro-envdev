@@ -21,7 +21,7 @@ jobs:
       run: make build
 
     - name: Run docker-compose up -d
-      run: docker-compose up -d
+      run: make run
 
       # Wait for containers to start up (adjust the sleep time as needed)
     - name: Wait for containers to start

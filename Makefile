@@ -4,4 +4,8 @@ build:
 	docker build -f containers/dev_reolink/Dockerfile -t pyronear/dev-reolink:latest containers/dev_reolink/
 
 run:
+	cp .env.test .env
 	docker compose up -d
+
+stop:
+	docker compose down

@@ -10,13 +10,8 @@ This Docker Compose configuration sets up a development environment for Pyronear
 
  Start the Docker services using the following command:
     ```
-    docker-compose up -d
-    ```
-
-Currently the initialisation script is failing, so you should launch it again with the command :
-
-    ```
-    docker-compose start init_script
+    make build
+    make run
     ```
 
 ### Services
@@ -25,6 +20,7 @@ Currently the initialisation script is failing, so you should launch it again wi
 3. **localstack**: Emulates AWS S3 using LocalStack.
 4. **pyro-engine**: Pyro Engine service.
 5. **promtail**: Log shipper for collecting logs from Docker containers.
+6. **reolink_dev**: a service which imitate a reolink camera by sending back pictures of fire
 
 ### Accessing the API
 Once the services are up and running, you can access the Pyronear API at `http://localhost:8080`.
@@ -35,7 +31,7 @@ Promtail collects logs from Docker containers. You can access the Promtail dashb
 ### Cleanup
 To stop and remove the Docker services, run:
 ```
-docker-compose down
+make stop
 ```
 
 This Docker Compose setup provides a comprehensive development environment for working with Pyronear's API and supporting services.

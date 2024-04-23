@@ -34,4 +34,8 @@ To stop and remove the Docker services, run:
 make stop
 ```
 
+### More images in the Reoling Dev Camera
+
+you need to create a directory data/images before launching the env, with the images inside :)
+
 This Docker Compose setup provides a comprehensive development environment for working with Pyronear's API and supporting services.

@@ -27,7 +27,7 @@ jobs:
 
       # Wait for containers to start up (adjust the sleep time as needed)
     - name: Wait for containers to start
-      run: sleep 10
+      run: sleep 20
 
     - name: Check container health
       run: docker-compose ps --filter "status=unhealthy" --quiet
@@ -52,3 +52,9 @@ jobs:
           exit 1
         else
           echo "No errors found in logs
+
+    - name: load tests requirements
+      run: pip install -r tests/requirements.txt
+
+    - name: launch tests
+      run: python tests/alerts.py

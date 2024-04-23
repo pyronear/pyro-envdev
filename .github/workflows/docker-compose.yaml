@@ -17,6 +17,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Wait for containers to start
+      run: make build
+
     - name: Run docker-compose up -d
       run: docker-compose up -d
 

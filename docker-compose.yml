@@ -75,10 +75,9 @@ services:
         max-size: 100m
         max-file: '5'
     depends_on:
-      pyro_api:
-        condition: service_healthy
-      reolink_dev:
-        condition: service_healthy
+      - init_script
+      - pyro_api
+      - reolink_dev
   promtail:
     image: grafana/promtail:2.7.3
     ports:
@@ -92,9 +91,7 @@ services:
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     restart: always
   init_script:
-    build:
-      context: .
-      dockerfile: Dockerfile.init
+    image: pyronear/pyro-api-init:latest
     environment:
     - API_URL=${API_URL}
     - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
@@ -106,7 +103,7 @@ services:
       pyro_api:
         condition: service_healthy
   reolink_dev:
-    image: reolink:latest
+    image: pyronear/dev-reolink:latest
     environment:
     - CAM_USER=${CAM_USER}
     - CAM_PWD=${CAM_PWD}

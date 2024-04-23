@@ -7,6 +7,24 @@ app = Flask(__name__)
 username = os.environ.get("CAM_USER")
 password = os.environ.get("CAM_PWD")
 
+
+def generate_ssl_certificates():
+    # Generate a private key
+    os.system("openssl genrsa -out key.pem 2048")
+
+    # Generate a Certificate Signing Request (CSR) non-interactively
+    os.system("openssl req -new -key key.pem -out csr.pem -subj '/CN=reolink_dev'")
+
+    # Generate a self-signed certificate
+    os.system("openssl x509 -req -days 365 -in csr.pem -signkey key.pem -out cert.pem")
+
+    # Remove the CSR file
+    os.system("rm csr.pem")
+
+
+# Call the function to generate SSL certificates
+generate_ssl_certificates()
+
 # Get a list of image filenames in the directory
 image_dir = "data/images"
 images_name = [
@@ -58,7 +76,7 @@ def health_check():
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        ssl_context=("data/custom_cert/cert.pem", "data/custom_cert/key.pem"),
+        ssl_context=("cert.pem", "key.pem"),
         port=443,
         debug=True,
     )

@@ -48,10 +48,10 @@ superuser_auth = {
 
 sub_path = "_DEV"
 
-devices = pd.read_csv(f"/data/csv/API_DATA{sub_path} - devices.csv")
-groups = pd.read_csv(f"/data/csv/API_DATA{sub_path} - groups.csv")
-sites = pd.read_csv(f"/data/csv/API_DATA{sub_path} - sites.csv")
-users = pd.read_csv(f"/data/csv/API_DATA{sub_path} - users.csv")
+devices = pd.read_csv(f"data/csv/API_DATA{sub_path} - devices.csv")
+groups = pd.read_csv(f"data/csv/API_DATA{sub_path} - groups.csv")
+sites = pd.read_csv(f"data/csv/API_DATA{sub_path} - sites.csv")
+users = pd.read_csv(f"data/csv/API_DATA{sub_path} - users.csv")
 
 logging.info(f"Devices : {devices}")
 logging.info(f"Groups : {groups}")

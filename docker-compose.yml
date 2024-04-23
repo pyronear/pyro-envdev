@@ -1,7 +1,7 @@
 version: '3.7'
 
 services:
-  pyro-api:
+  pyro_api:
     image: pyronear/pyro-api:latest
     restart: always
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
@@ -21,7 +21,7 @@ services:
     - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     - TELEGRAM_TEST_CHAT_ID=${TELEGRAM_TEST_CHAT_ID}
     healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro-api:8080/status' -H 'accept: application/json'"]
+      test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:8080/status' -H 'accept: application/json'"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -57,7 +57,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-  pyro-engine:
+  pyro_engine:
     image: pyronear/pyro-engine:latest
     environment:
     - API_URL=${API_URL}
@@ -75,7 +75,9 @@ services:
         max-size: 100m
         max-file: '5'
     depends_on:
-      pyro-api:
+      pyro_api:
+        condition: service_healthy
+      reolink_dev:
         condition: service_healthy
   promtail:
     image: grafana/promtail:2.7.3
@@ -101,5 +103,19 @@ services:
     - ./data/:/data/
     command: sh -c 'python /usr/local/bin/init_script.py && exit 0 || exit 1'
     depends_on:
-      pyro-api:
+      pyro_api:
         condition: service_healthy
+  reolink_dev:
+    image: reolink:latest
+    environment:
+    - CAM_USER=${CAM_USER}
+    - CAM_PWD=${CAM_PWD}
+    ports:
+      - "443:443"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev/health'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5

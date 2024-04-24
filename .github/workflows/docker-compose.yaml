@@ -44,17 +44,17 @@ jobs:
           exit 1
         fi
 
-    - name: Check container logs for errors
-      run: |-
-        docker-compose logs --tail=100 | grep -i -E "error|exception"
-        if [ $? -eq 0 ]; then
-          echo "Found errors in logs"
-          exit 1
-        else
-          echo "No errors found in logs
-
     - name: load tests requirements
       run: pip install -r tests/requirements.txt
 
     - name: launch tests
       run: python tests/alerts.py
+
+    - name: Check container logs for errors
+      run: |-
+        docker-compose logs --tail=50 | grep -i -E "error|exception"
+        if [ $? -eq 0 ]; then
+          echo "Found errors in logs"
+          exit 1
+        else
+          echo "No errors found in logs

@@ -58,3 +58,4 @@ jobs:
           exit 1
         else
           echo "No errors found in logs
+          exit 0

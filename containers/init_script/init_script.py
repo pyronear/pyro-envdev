@@ -4,9 +4,11 @@ import requests
 from typing import Any, Dict, Optional
 import pandas as pd
 import secrets
-import os
 import sys
 import logging
+import boto3
+import os
+from dotenv import load_dotenv
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
@@ -125,3 +127,29 @@ for i in range(len(devices)):
     )
     logging.info(f"saving device : {payload}")
     r = api_request("post", f"{api_url}/devices/", superuser_auth, payload)
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get S3 endpoint URL and credentials from environment variables
+s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+s3_access_key = os.getenv("S3_ACCESS_KEY")
+s3_secret_key = os.getenv("S3_SECRET_KEY")
+s3_region = os.getenv("S3_REGION")
+bucket_name = os.getenv("BUCKET_NAME")
+
+# Create a Boto3 client for the S3 service
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=s3_endpoint_url,
+    aws_access_key_id=s3_access_key,
+    aws_secret_access_key=s3_secret_key,
+    region_name=s3_region,
+)
+
+# Create the bucket
+try:
+    s3_client.create_bucket(Bucket=bucket_name)
+    print(f"Bucket '{bucket_name}' created successfully.")
+except Exception as e:
+    print(f"Error creating bucket '{bucket_name}': {e}")

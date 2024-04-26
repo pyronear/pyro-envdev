@@ -48,7 +48,7 @@ jobs:
       run: pip install -r tests/requirements.txt
 
     - name: launch tests
-      run: python tests/alerts.py
+      run: pytest tests/*
 
     - name: Check container logs for errors
       run: |-

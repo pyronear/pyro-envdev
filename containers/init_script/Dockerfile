@@ -7,7 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # hadolint ignore=DL3013
-RUN pip install --no-cache-dir pandas git+https://github.com/pyronear/pyro-engine@develop
+RUN pip install --no-cache-dir pandas git+https://github.com/pyronear/pyro-engine@develop python-dotenv==1.0.1 boto3==1.34.90
 
 # Copy your initialization script into the container
 COPY init_script.py /usr/local/bin/

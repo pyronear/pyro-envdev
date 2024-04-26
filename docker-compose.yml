@@ -13,7 +13,7 @@ services:
     - SQLALCHEMY_SILENCE_UBER_WARNING=1
     - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
     - SUPERUSER_PWD=${SUPERUSER_PWD}
-    - BUCKET_NAME=sample-bucket
+    - BUCKET_NAME=${BUCKET_NAME}
     - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
     - S3_ACCESS_KEY=${S3_ACCESS_KEY}
     - S3_SECRET_KEY=${S3_SECRET_KEY}
@@ -78,24 +78,17 @@ services:
       - init_script
       - pyro_api
       - reolink_dev
-  promtail:
-    image: grafana/promtail:2.7.3
-    ports:
-    - 8300:8300
-    volumes:
-    - /var/log:/var/log
-    - ./promtail/config.yml:/etc/promtail/config.yml
-    - /var/lib/docker/containers:/var/lib/docker/containers
-    env_file:
-    - .env
-    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
-    restart: always
   init_script:
     image: pyronear/pyro-api-init:latest
     environment:
     - API_URL=${API_URL}
     - SUPERUSER_LOGIN=${SUPERUSER_LOGIN}
     - SUPERUSER_PWD=${SUPERUSER_PWD}
+    - BUCKET_NAME=${BUCKET_NAME}
+    - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+    - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    - S3_SECRET_KEY=${S3_SECRET_KEY}
+    - S3_REGION=${S3_REGION}
     volumes:
     - ./data/:/data/
     command: sh -c 'python /usr/local/bin/init_script.py && exit 0 || exit 1'

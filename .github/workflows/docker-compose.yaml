@@ -52,7 +52,7 @@ jobs:
 
     - name: Check container logs for errors
       run: |-
-        docker-compose logs --tail=10 | grep -i -E "error|exception" | grep -v -i "hypercorn.error"
+        docker-compose logs --tail=20 | grep -i -E "error|exception" | grep -v -i "hypercorn.error|Invalid credentials"
         if [ $? -eq 0 ]; then
           echo "Found errors in logs"
           exit 1

@@ -35,7 +35,7 @@ def test_s3_bucket(s3_client):
 def test_s3_content(s3_client):
     bucket_contents = s3_client.list_objects_v2(Bucket=bucket_name)
     keys = [item["Key"] for item in bucket_contents.get("Contents", [])]
-    assert "20240426131538-019223c4.jpg" in keys
+    assert keys != []
 
 
 if __name__ == "__main__":

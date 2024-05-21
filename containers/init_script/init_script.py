@@ -54,7 +54,6 @@ devices = pd.read_csv(f"data/csv/API_DATA{sub_path} - devices.csv")
 groups = pd.read_csv(f"data/csv/API_DATA{sub_path} - groups.csv")
 sites = pd.read_csv(f"data/csv/API_DATA{sub_path} - sites.csv")
 users = pd.read_csv(f"data/csv/API_DATA{sub_path} - users.csv")
-installations = pd.read_csv(f"data/csv/API_DATA{sub_path} - installations.csv")
 
 logging.info(f"Devices : {devices}")
 logging.info(f"Groups : {groups}")
@@ -129,18 +128,6 @@ for i in range(len(devices)):
     logging.info(f"saving device : {payload}")
     r = api_request("post", f"{api_url}/devices/", superuser_auth, payload)
 
-
-for i in range(len(installations)):
-    data = installations.iloc[i]
-    site_id = int(data["site_id"])
-    device_id = int(data["device_id"])
-    payload = dict(
-        device_id=device_id, site_id=site_id, start_ts="2019-08-24T14:15:22.00"
-    )
-    print(payload)
-    r = api_request("post", f"{api_url}/installations/", superuser_auth, payload)
-    print(r)
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -149,6 +136,7 @@ s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
 s3_access_key = os.getenv("S3_ACCESS_KEY")
 s3_secret_key = os.getenv("S3_SECRET_KEY")
 s3_region = os.getenv("S3_REGION")
+bucket_name = os.getenv("BUCKET_NAME")
 
 # Create a Boto3 client for the S3 service
 s3_client = boto3.client(
@@ -159,12 +147,9 @@ s3_client = boto3.client(
     region_name=s3_region,
 )
 
-
-for i in range(len(sites)):
-    data = sites.iloc[i]
-    bucket_site_name = data["name"]
-    try:
-        s3_client.create_bucket(Bucket=bucket_site_name)
-        print(f"Subfolder '{data['name']}' created in bucket '{bucket_site_name}'.")
-    except Exception as e:
-        print(f"Error creating bucket '{bucket_site_name}': {e}")
+# Create the bucket
+try:
+    s3_client.create_bucket(Bucket=bucket_name)
+    print(f"Bucket '{bucket_name}' created successfully.")
+except Exception as e:
+    print(f"Error creating bucket '{bucket_name}': {e}")

@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   pyro_api:
     image: pyronear/pyro-api:latest

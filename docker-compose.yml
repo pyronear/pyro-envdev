@@ -57,6 +57,8 @@ services:
       retries: 5
   pyro_engine:
     image: pyronear/pyro-engine:latest
+    profiles:
+      - engine
     environment:
     - API_URL=${API_URL}
     - LAT=${LAT}
@@ -73,9 +75,12 @@ services:
         max-size: 100m
         max-file: '5'
     depends_on:
-      - init_script
-      - pyro_api
-      - reolink_dev
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy
+      reolink_dev:
+        condition: service_healthy
   init_script:
     image: pyronear/pyro-api-init:latest
     environment:
@@ -95,6 +100,8 @@ services:
         condition: service_healthy
   reolink_dev:
     image: pyronear/dev-reolink:latest
+    profiles:
+      - engine
     environment:
     - CAM_USER=${CAM_USER}
     - CAM_PWD=${CAM_PWD}
@@ -107,3 +114,23 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+
+  frontend:
+    image: pyronear/pyro-platform:latest
+    command: python index.py --host 0.0.0.0 --port 8050
+    profiles:
+      - front
+    ports:
+      - 8050:8050
+    environment:
+      - API_URL=${API_URL}
+      - API_LOGIN=${SUPERUSER_LOGIN}
+      - API_PWD=${SUPERUSER_PWD}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - DEBUG=True
+      - LOGIN=${LOGIN}
+    depends_on:
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy

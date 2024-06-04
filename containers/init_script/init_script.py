@@ -54,11 +54,14 @@ devices = pd.read_csv(f"data/csv/API_DATA{sub_path} - devices.csv")
 groups = pd.read_csv(f"data/csv/API_DATA{sub_path} - groups.csv")
 sites = pd.read_csv(f"data/csv/API_DATA{sub_path} - sites.csv")
 users = pd.read_csv(f"data/csv/API_DATA{sub_path} - users.csv")
+installations = pd.read_csv(f"data/csv/API_DATA{sub_path} - installations.csv")
+
 
 logging.info(f"Devices : {devices}")
 logging.info(f"Groups : {groups}")
 logging.info(f"Sites : {sites}")
 logging.info(f"Users : {users}")
+logging.info(f"installations : {installations}")
 
 key = "name"
 for group in groups[key]:
@@ -127,6 +130,19 @@ for i in range(len(devices)):
     )
     logging.info(f"saving device : {payload}")
     r = api_request("post", f"{api_url}/devices/", superuser_auth, payload)
+
+
+for i in range(len(installations)):
+    data = installations.iloc[i]
+    payload = dict(
+        device_id=int(data["device_id"]),
+        site_id=int(data["site_id"]),
+        start_ts=data["start_ts"],
+        end_ts=data["end_ts"] if not pd.isna(data["end_ts"]) else None,
+        is_trustworthy=bool(data["is_trustworthy"]),
+    )
+    logging.info(f"saving installations : {payload}")
+    api_request("post", f"{api_url}/installations/", superuser_auth, payload)
 
 # Load environment variables from .env file
 load_dotenv()

@@ -1,0 +1,5 @@
+id,device_id,site_id,start_ts,end_ts,is_trustworthy
+1,1,1,"2019-10-13T08:18:45.447773",None,True
+2,2,1,"2019-10-13T08:18:45.447773",None,True
+3,3,1,"2019-10-13T08:18:45.447773",None,True
+4,4,1,"2019-10-13T08:18:45.447773",None,True

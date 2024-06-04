@@ -7,16 +7,29 @@ build:
 build-external:
 	cd ../pyro-api/; make build
 	cd ../pyro-engine/; make build
+	cd ../pyro-platform/; make build
 
 
 build-all: build build-external
 
-run:
+run-api:
 	cp .env.test .env
 	docker compose up -d
 
+run-engine:
+	cp .env.test .env
+	docker compose --profile engine up -d
+
+run-front:
+	cp .env.test .env
+	docker compose --profile front up -d
+
+run:
+	cp .env.test .env
+	docker compose --profile front --profile engine up -d
+
 stop:
-	docker compose down
+	docker compose --profile front --profile engine down
 
 test:
 	pytest -s tests/*

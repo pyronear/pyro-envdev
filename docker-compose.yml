@@ -106,7 +106,21 @@ services:
     - CAM_USER=${CAM_USER}
     - CAM_PWD=${CAM_PWD}
     ports:
-      - "443:443"
+      - "443:444"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev/health'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  reolink_dev2:
+    image: pyronear/dev-reolink:latest
+    profiles:
+      - engine
+    environment:
+    - CAM_USER=${CAM_USER}
+    - CAM_PWD=${CAM_PWD}
     volumes:
       - ./data:/app/data
     healthcheck:

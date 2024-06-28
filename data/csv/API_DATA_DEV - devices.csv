@@ -1,5 +1,0 @@
-id,login,password,azimuth,pitch,lat,lon,elevation,specs,last_ping,angle_of_view,software_hash,owner_id,scope,group_id,site_id,api_id
-1,test_1,passwrd1,0,0,48.898597,2.376033,100,systemV0.2,2023-05-29T15:32:57.215418,87,0123456789ABCDEF,7,device,3,1,1.0
-2,test_2,passwrd2,90,0,48.898597,2.376033,100,systemV0.2,2023-05-29T15:32:57.215418,87,0123456789ABCDEF,7,device,3,1,2.0
-3,test_3,passwrd3,180,0,48.898597,2.376033,100,systemV0.2,2023-05-29T15:32:57.215418,87,0123456789ABCDEF,7,device,3,1,3.0
-4,test_4,passwrd4,270,0,48.898597,2.376033,100,systemV0.2,2023-05-29T15:32:57.215418,87,0123456789ABCDEF,7,device,3,1,4.0

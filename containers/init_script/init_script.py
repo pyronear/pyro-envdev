@@ -3,20 +3,18 @@
 import requests
 from typing import Any, Dict, Optional
 import pandas as pd
-import secrets
 import sys
 import logging
-import boto3
 import os
-from dotenv import load_dotenv
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
 
 def get_token(api_url: str, login: str, pwd: str) -> str:
     response = requests.post(
-        f"{api_url}/login/access-token",
+        f"{api_url}/login/creds",
         data={"username": login, "password": pwd},
+        timeout=5,
     )
     if response.status_code != 200:
         raise ValueError(response.json()["detail"])
@@ -32,16 +30,17 @@ def api_request(
     kwargs = {"json": payload} if isinstance(payload, dict) else {}
 
     response = getattr(requests, method_type)(route, headers=headers, **kwargs)
+    try:
+        detail = response.json()
+    except (requests.exceptions.JSONDecodeError, KeyError):
+        detail = response.text
+    assert response.status_code // 100 == 2, print(detail)
     return response.json()
 
 
-def get_api_idx(api_list, element, key):
-    return [e["id"] for e in api_list if e[key] == element]
-
-
 api_url = os.environ.get("API_URL")
-superuser_login = os.environ.get("SUPERUSER_LOGIN")
-superuser_pwd = os.environ.get("SUPERUSER_PWD")
+superuser_login = os.environ.get("SUPERADMIN_LOGIN")
+superuser_pwd = os.environ.get("SUPERADMIN_PWD")
 
 superuser_auth = {
     "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
@@ -50,122 +49,64 @@ superuser_auth = {
 
 sub_path = "_DEV"
 
-devices = pd.read_csv(f"data/csv/API_DATA{sub_path} - devices.csv")
-groups = pd.read_csv(f"data/csv/API_DATA{sub_path} - groups.csv")
-sites = pd.read_csv(f"data/csv/API_DATA{sub_path} - sites.csv")
 users = pd.read_csv(f"data/csv/API_DATA{sub_path} - users.csv")
-installations = pd.read_csv(f"data/csv/API_DATA{sub_path} - installations.csv")
+organizations = pd.read_csv(f"data/csv/API_DATA{sub_path} - organizations.csv")
+cameras = pd.read_csv(f"data/csv/API_DATA{sub_path} - cameras.csv")
+cameras = cameras.fillna("")
+
+for orga in organizations.itertuples(index=False):
+    logging.info(f"saving orga : {orga.name}")
+    payload = {"name": orga.name, "type": orga.type}
+    api_request("post", f"{api_url}/organizations/", superuser_auth, payload)
 
 
-logging.info(f"Devices : {devices}")
-logging.info(f"Groups : {groups}")
-logging.info(f"Sites : {sites}")
-logging.info(f"Users : {users}")
-logging.info(f"installations : {installations}")
-
-key = "name"
-for group in groups[key]:
-    if group != "admins":
-        payload = dict(name=group)
-        logging.info(f"saving group : {payload}")
-        api_request("post", f"{api_url}/groups/", superuser_auth, payload)
-
-registered_groups = api_request("get", f"{api_url}/groups/", superuser_auth)
-
-groups["api_id"] = [
-    get_api_idx(registered_groups, v, key)[0] for v in groups[key].values
-]
-
-key = "login"
-for i in range(len(users)):
-    data = users.iloc[i]
-    password = str(secrets.token_urlsafe(12))
-    users.at[i, "password"] = password
-    group_id = int(groups[groups["id"] == data["group_id"]]["api_id"].values[0])
-    payload = dict(
-        login=data["login"], password=password, scope=data["scope"], group_id=group_id
-    )
-    logging.info(f"saving user : {payload}")
+for user in users.itertuples(index=False):
+    logging.info(f"saving user : {user.login}")
+    payload = {
+        "organization_id": user.organization_id,
+        "password": user.password,
+        "login": user.login,
+        "role": user.role,
+    }
     api_request("post", f"{api_url}/users/", superuser_auth, payload)
 
-api_users = api_request("get", f"{api_url}/users/", superuser_auth)
-users["api_id"] = [get_api_idx(api_users, v, key)[0] for v in users[key].values]
+for camera in cameras.itertuples(index=False):
+    logging.info(f"saving camera : {camera.name}")
+    payload = {
+        "organization_id": camera.organization_id,
+        "name": camera.name,
+        "angle_of_view": camera.angle_of_view,
+        "elevation": camera.elevation,
+        "lat": camera.lat,
+        "lon": camera.lon,
+        "is_trustable": camera.is_trustable,
+        "last_active_at": camera.last_active_at,
+    }
+    api_request("post", f"{api_url}/cameras/", superuser_auth, payload)
 
-key = "name"
-for i in range(len(sites)):
-    data = sites.iloc[i]
-    group_id = int(groups[groups["id"] == data["group_id"]]["api_id"].values[0])
-    payload = dict(
-        name=data[key],
-        country=data["country"],
-        geocode=str(data["geocode"]),
-        lat=float(data["lat"]),
-        lon=float(data["lon"]),
-        group_id=group_id,
-    )
-    logging.info(f"saving site : {payload}")
-    api_request("post", f"{api_url}/sites/", superuser_auth, payload)
-
-
-key = "login"
-for i in range(len(devices)):
-    data = devices.iloc[i]
-    group_id = int(groups[groups["id"] == data["group_id"]]["api_id"].values[0])
-    owner_id = int(users[users["id"] == data["group_id"]]["api_id"].values[0])
-    payload = dict(
-        login=data[key],
-        password=data["password"],
-        azimuth=int(data["azimuth"]),
-        pitch=int(data["pitch"]),
-        lat=float(data["lat"]),
-        lon=float(data["lon"]),
-        elevation=int(data["elevation"]),
-        specs=data["specs"],
-        last_ping=data["last_ping"],
-        angle_of_view=int(data["angle_of_view"]),
-        software_hash=data["software_hash"],
-        owner_id=owner_id,
-        scope=data["scope"],
-        group_id=group_id,
-    )
-    logging.info(f"saving device : {payload}")
-    r = api_request("post", f"{api_url}/devices/", superuser_auth, payload)
-
-
-for i in range(len(installations)):
-    data = installations.iloc[i]
-    payload = dict(
-        device_id=int(data["device_id"]),
-        site_id=int(data["site_id"]),
-        start_ts=data["start_ts"],
-        end_ts=data["end_ts"] if not pd.isna(data["end_ts"]) else None,
-        is_trustworthy=bool(data["is_trustworthy"]),
-    )
-    logging.info(f"saving installations : {payload}")
-    api_request("post", f"{api_url}/installations/", superuser_auth, payload)
 
 # Load environment variables from .env file
-load_dotenv()
+# load_dotenv()
 
 # Get S3 endpoint URL and credentials from environment variables
-s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
-s3_access_key = os.getenv("S3_ACCESS_KEY")
-s3_secret_key = os.getenv("S3_SECRET_KEY")
-s3_region = os.getenv("S3_REGION")
-bucket_name = os.getenv("BUCKET_NAME")
+# s3_endpoint_url = os.getenv("S3_ENDPOINT_URL")
+# s3_access_key = os.getenv("S3_ACCESS_KEY")
+# s3_secret_key = os.getenv("S3_SECRET_KEY")
+# s3_region = os.getenv("S3_REGION")
+# bucket_name = os.getenv("BUCKET_NAME")
 
 # Create a Boto3 client for the S3 service
-s3_client = boto3.client(
-    "s3",
-    endpoint_url=s3_endpoint_url,
-    aws_access_key_id=s3_access_key,
-    aws_secret_access_key=s3_secret_key,
-    region_name=s3_region,
-)
+# s3_client = boto3.client(
+#    "s3",
+#    endpoint_url=s3_endpoint_url,
+#    aws_access_key_id=s3_access_key,
+#    aws_secret_access_key=s3_secret_key,
+#    region_name=s3_region,
+# )
 
 # Create the bucket
-try:
-    s3_client.create_bucket(Bucket=bucket_name)
-    print(f"Bucket '{bucket_name}' created successfully.")
-except Exception as e:
-    print(f"Error creating bucket '{bucket_name}': {e}")
+# try:
+#    s3_client.create_bucket(Bucket=bucket_name)
+#    print(f"Bucket '{bucket_name}' created successfully.")
+# except Exception as e:
+#    print(f"Error creating bucket '{bucket_name}': {e}")

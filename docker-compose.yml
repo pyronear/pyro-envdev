@@ -118,7 +118,7 @@ services:
       timeout: 10s
       retries: 5
   reolink_dev2:
-    image: pyronear/dev-reolink:latest
+    image: pyronear/reolink-dev2:latest
     profiles:
       - engine
     environment:
@@ -127,7 +127,7 @@ services:
     volumes:
       - ./data:/app/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev/health'"]
+      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev2/health'"]
       interval: 10s
       timeout: 10s
       retries: 5

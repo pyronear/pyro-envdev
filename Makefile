@@ -3,6 +3,7 @@
 build:
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
 	docker build -f containers/dev_reolink/Dockerfile -t pyronear/dev-reolink:latest containers/dev_reolink/
+	docker build -f containers/reolink_dev2/Dockerfile -t pyronear/reolink-dev2:latest containers/reolink_dev2/
 
 build-external:
 	cd ../pyro-api/; make build

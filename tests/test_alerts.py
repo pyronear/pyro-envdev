@@ -27,12 +27,12 @@ def db_connection():
     conn.close()
 
 
-def test_alerts_count(db_connection):
+def test_detections_count(db_connection):
     # Create a cursor
     cursor = db_connection.cursor()
 
     # Execute the SQL query
-    cursor.execute("SELECT count(*) FROM alerts")
+    cursor.execute("SELECT count(*) FROM detection")
 
     # Fetch the result
     result = cursor.fetchone()[0]
@@ -41,7 +41,7 @@ def test_alerts_count(db_connection):
     cursor.close()
 
     # Check if the result is equal to 1
-    assert result > 0, "Number of alerts is not equal to 1"
+    assert result > 0, "Number of alerts is " + str(result)
 
 
 if __name__ == "__main__":

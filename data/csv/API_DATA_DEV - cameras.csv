@@ -1,3 +1,4 @@
 id,organization_id,name,angle_of_view,elevation,lat,lon,is_trustable,last_active_at,created_at
 1,1,cam-1,91.3,110.6,3.6,-45.2,True,"2023-11-07T15:07:19.226673","2023-11-07T15:07:19.226673"
-2,2,cam-2,91.3,110.6,3.6,-45.2,False,None,"2023-11-07T15:07:19.226673"
+2,1,cam-2,91.3,110.6,3.6,-45.2,False,None,"2023-11-07T15:07:19.226673"
+3,2,cam-3,91.3,110.6,3.6,-45.2,False,None,"2023-11-07T15:07:19.226673"

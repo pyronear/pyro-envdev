@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import requests
 from typing import Any, Dict, Optional
 import pandas as pd
 import sys
 import logging
 import os
+import requests
+import json
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
 
@@ -38,10 +39,24 @@ def api_request(
     return response.json()
 
 
-api_url = os.environ.get("API_URL")
+# Function to read JSON data from a file
+def read_json_file(file_path):
+    with open(file_path, "r") as file:
+        return json.load(file)
+
+
+# Function to write JSON data to a file
+def write_json_file(file_path, data):
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
+
+
+api_url = os.environ.get("API_URL") + "/api/v1"
 superuser_login = os.environ.get("SUPERADMIN_LOGIN")
 superuser_pwd = os.environ.get("SUPERADMIN_PWD")
+credentials_path = "data/credentials.json"
 
+print(api_url)
 superuser_auth = {
     "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
     "Content-Type": "application/json",
@@ -70,6 +85,9 @@ for user in users.itertuples(index=False):
     }
     api_request("post", f"{api_url}/users/", superuser_auth, payload)
 
+
+data = read_json_file(credentials_path)
+
 for camera in cameras.itertuples(index=False):
     logging.info(f"saving camera : {camera.name}")
     payload = {
@@ -82,8 +100,16 @@ for camera in cameras.itertuples(index=False):
         "is_trustable": camera.is_trustable,
         "last_active_at": camera.last_active_at,
     }
-    api_request("post", f"{api_url}/cameras/", superuser_auth, payload)
+    id = api_request("post", f"{api_url}/cameras/", superuser_auth, payload)["id"]
+    result = api_request("post", f"{api_url}/cameras/{id}/token", superuser_auth)
 
+    camera_token = result["access_token"]
+    logging.info(f"Token generated : {camera_token}")
+    for i, key in enumerate(data):
+        if data[key]["name"] == camera.name:
+            data[key]["token"] = camera_token
+
+write_json_file(credentials_path, data)
 
 # Load environment variables from .env file
 # load_dotenv()

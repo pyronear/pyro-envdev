@@ -6,7 +6,8 @@ build:
 
 build-external:
 	cd ../pyro-api/; make build
-	cd ../pyro-engine/; make build
+	cd ../pyro-engine/; make build-lib
+	cd ../pyro-engine/; make build-app
 	cd ../pyro-platform/; make build
 
 

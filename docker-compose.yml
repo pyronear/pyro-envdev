@@ -21,9 +21,9 @@ services:
     - TELEGRAM_TEST_CHAT_ID=${TELEGRAM_TEST_CHAT_ID}
     healthcheck:
       test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
-      interval: 10s
+      interval: 20s
       timeout: 10s
-      retries: 5
+      retries: 10
     depends_on:
       db:
         condition: service_healthy
@@ -39,9 +39,9 @@ services:
       - POSTGRES_DB=dummy_pg_db
     healthcheck:
       test: [CMD-SHELL, sh -c 'pg_isready -U dummy_pg_user -d dummy_pg_db']
-      interval: 10s
+      interval: 20s
       timeout: 10s
-      retries: 5
+      retries: 10
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
     image: localstack/localstack:1.4.0

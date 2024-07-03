@@ -56,7 +56,6 @@ superuser_login = os.environ.get("SUPERADMIN_LOGIN")
 superuser_pwd = os.environ.get("SUPERADMIN_PWD")
 credentials_path = "data/credentials.json"
 
-print(api_url)
 superuser_auth = {
     "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
     "Content-Type": "application/json",

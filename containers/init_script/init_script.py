@@ -70,7 +70,7 @@ cameras = cameras.fillna("")
 
 for orga in organizations.itertuples(index=False):
     logging.info(f"saving orga : {orga.name}")
-    payload = {"name": orga.name, "type": orga.type}
+    payload = {"name": orga.name}
     api_request("post", f"{api_url}/organizations/", superuser_auth, payload)
 
 

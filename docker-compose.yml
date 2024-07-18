@@ -121,6 +121,7 @@ services:
     environment:
     - CAM_USER=${CAM_USER}
     - CAM_PWD=${CAM_PWD}
+    - API_URL= ${API_URL}
     volumes:
       - ./data:/app/data
     healthcheck:

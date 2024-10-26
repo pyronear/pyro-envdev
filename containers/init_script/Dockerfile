@@ -7,7 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # hadolint ignore=DL3013
-RUN pip install --no-cache-dir pandas git+https://github.com/pyronear/pyro-engine@develop python-dotenv==1.0.1 boto3==1.34.90
+RUN pip install --no-cache-dir pandas python-dotenv==1.0.1 boto3==1.34.90 requests
 
 # Copy your initialization script into the container
 COPY init_script.py /usr/local/bin/
@@ -17,3 +17,6 @@ RUN chmod +x /usr/local/bin/init_script.py
 
 # Command to run the script
 CMD ["python /usr/local/bin/init_script.py"]
+
+
+###### TODO REFACTOR : use the init scripts which are in the test_update_pi directory

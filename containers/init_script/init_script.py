@@ -1,3 +1,5 @@
+###### TODO REFACTOR : use the init scripts which are in the test_update_pi directory
+
 #!/usr/bin/env python
 
 from typing import Any, Dict, Optional
@@ -55,6 +57,8 @@ api_url = os.environ.get("API_URL") + "/api/v1"
 superuser_login = os.environ.get("SUPERADMIN_LOGIN")
 superuser_pwd = os.environ.get("SUPERADMIN_PWD")
 credentials_path = "data/credentials.json"
+credentials_path_etl = "data/credentials-wildfire.json"
+
 
 superuser_auth = {
     "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
@@ -86,6 +90,7 @@ for user in users.itertuples(index=False):
 
 
 data = read_json_file(credentials_path)
+data_wildfire = read_json_file(credentials_path_etl)
 
 for camera in cameras.itertuples(index=False):
     logging.info(f"saving camera : {camera.name}")
@@ -107,8 +112,12 @@ for camera in cameras.itertuples(index=False):
     for i, key in enumerate(data):
         if data[key]["name"] == camera.name:
             data[key]["token"] = camera_token
+    for i, key in enumerate(data_wildfire):
+        if data_wildfire[key]["name"] == camera.name:
+            data_wildfire[key]["token"] = camera_token
 
 write_json_file(credentials_path, data)
+write_json_file(credentials_path_etl, data_wildfire)
 
 # Load environment variables from .env file
 # load_dotenv()

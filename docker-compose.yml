@@ -1,5 +1,6 @@
 services:
   pyro_api:
+    container_name: api
     image: pyronear/alert-api:latest
     restart: always
     #command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
@@ -60,6 +61,7 @@ services:
       timeout: 10s
       retries: 5
   pyro_engine:
+    container_name: engine
     image: pyronear/pyro-engine:latest
     profiles:
       - engine
@@ -89,7 +91,25 @@ services:
         condition: service_healthy
       reolink_dev:
         condition: service_healthy
+  etl_scripts:
+    container_name: etl
+    image: pyronear/pyro-etl:latest
+    profiles:
+      - etl
+    environment:
+    - API_URL=${API_URL}
+    - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
+    - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+    command: /bin/sh -c "python /usr/src/app/dl_images.py && python /usr/src/app/predict_load.py"
+    volumes:
+    - ./data:/usr/src/app/data
+    depends_on:
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy
   init_script:
+    container_name: init
     image: pyronear/pyro-api-init:latest
     environment:
     - API_URL=${API_URL}

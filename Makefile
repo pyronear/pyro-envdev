@@ -22,6 +22,10 @@ run-engine:
 	cp .env.test .env
 	docker compose --profile engine up -d
 
+run-etl:
+	cp .env.test .env
+	docker compose --profile etl up -d
+
 run-front:
 	cp .env.test .env
 	docker compose --profile front up -d
@@ -31,7 +35,7 @@ run:
 	docker compose --profile front --profile engine up -d
 
 stop:
-	docker compose --profile front --profile engine down
+	docker compose --profile front --profile engine --profile etl down
 
 test:
 	pytest -s tests/*

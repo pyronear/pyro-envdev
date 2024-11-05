@@ -3,7 +3,6 @@ services:
     container_name: api
     image: pyronear/alert-api:latest
     restart: always
-    #command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8080
     command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
     ports:
     - 5050:5050
@@ -19,8 +18,7 @@ services:
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
     - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-    - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-    - TELEGRAM_TEST_CHAT_ID=${TELEGRAM_TEST_CHAT_ID}
+    - S3_PREFIX=${S3_PREFIX}
     healthcheck:
       test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
       interval: 20s

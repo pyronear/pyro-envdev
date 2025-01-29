@@ -166,7 +166,6 @@ services:
       - API_PWD=${SUPERADMIN_PWD}
       - SENTRY_DSN=${SENTRY_DSN}
       - DEBUG=FALSE
-      - LOGIN=${LOGIN}
     depends_on:
       init_script:
         condition: service_started

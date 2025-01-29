@@ -26,10 +26,6 @@ run-etl:
 	cp .env.test .env
 	docker compose --profile etl up -d
 
-run-front:
-	cp .env.test .env
-	docker compose --profile front up -d
-
 run:
 	cp .env.test .env
 	docker compose --profile front --profile engine up -d

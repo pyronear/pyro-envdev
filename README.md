@@ -17,39 +17,58 @@ This Docker Compose configuration sets up a development environment for Pyronear
 
 ### Usage
 
-First you have to create a .env file, a simple copy of the .env.test would be enough.
-    ```
-    cp .env.test .env
-    ```
-
 Start the Docker services using the following command:
-    ```
-    make build
-    make run
-    ```
+```bash
+make build
+make run
+```
+
 Then, you will be able to connect to the API thanks to the credentials in the .env file
 
 If you want to launch only the engine and two dev-cameras you can use :
-    ```
-    make run-engine
-    ```
+```bash
+make run-engine
+```
 
 you can check that everyhing is working thanks to the following commands :
-    ```
-    docker logs init
-    docker logs engine
-    ```
+```bash
+docker logs init
+docker logs engine
+```
 
 ### Accessing the API
 Once the services are up and running, you can access the Pyronear API at `http://localhost:5050/docs`.
 
 
 ### Accessing the web-app
+
+First you need to tell your computer where your S3 is.
+For that you will have to add this line to you /etc/hosts :
+
+```bash
+127.0.0.1 www.localstack.com localstack
+```
+
 Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
+
+29/01/2024 : For the moment, the ADMIN access doesn't show the alerts sent by the camera. For that you will have to use a user account which are defined in data/csv/users.csv
+
+### Launch the web app manually from the pyro-platform directory
+
+You can launch the API :
+
+```bash
+make run-api
+```
+
+And, in your pyro-platform/.env use this API_URL env var :
+```bash
+API_URL=http://localhost:5050
+```
 
 ### Cleanup
 To stop and remove the Docker services, run:
-```
+```bash
 make stop
 ```
 

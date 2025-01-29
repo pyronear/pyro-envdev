@@ -42,6 +42,7 @@ services:
       retries: 10
   # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
   localstack:
+    container_name: localstack
     image: localstack/localstack:1.4.0
     ports:
     - 4566:4566

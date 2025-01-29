@@ -1,3 +1,7 @@
+*.onnx
+*.jpg
+data/images/
+*.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -26,7 +30,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+venv_*
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -102,8 +106,8 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
+.env
 env/
 venv/
 ENV/
@@ -127,3 +131,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+model_metadata.json
+metadata.yaml
+model_ncnn.py
+model.ncnn.bin
+model.ncnn.param
+*.zip

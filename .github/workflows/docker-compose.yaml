@@ -1,0 +1,60 @@
+name: Docker Compose Up and Health Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  docker-compose-up:
+    name: Docker Compose Up
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.9]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Wait for containers to start
+      run: make build
+
+    - name: Run docker-compose up -d
+      run: make run
+
+      # Wait for containers to start up (adjust the sleep time as needed)
+    - name: Wait for containers to start
+      run: sleep 120
+
+    - name: Check container health
+      run: docker compose ps --filter "status=unhealthy" --quiet
+      continue-on-error: true
+      id: check_health
+
+    - name: Print container health status
+      run: |-
+        if [ -z "${{ steps.check_health.outputs.stdout }}" ]; then
+          echo "All containers are healthy"
+          exit 0
+        else
+          echo "Some containers are unhealthy"
+          exit 1
+        fi
+
+    - name: load tests requirements
+      run: pip install -r tests/requirements.txt
+
+    - name: launch tests
+      run: pytest tests/*
+
+    - name: Capture logs
+      run: docker compose logs --tail=40 > logs.txt
+
+    - name: Show logs
+      run: cat logs.txt
+
+    - name: Filter logs
+      run: cat logs.txt | grep -i -E "error|exception" | grep -v -i "hypercorn.error" || true

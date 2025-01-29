@@ -1,0 +1,164 @@
+services:
+  pyro_api:
+    container_name: api
+    image: pyronear/alert-api:v1.0.0
+    restart: always
+    command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
+    ports:
+    - 5050:5050
+    environment:
+    - DEBUG=true
+    - POSTGRES_URL=postgresql+asyncpg://dummy_pg_user:dummy_pg_pwd@db/dummy_pg_db
+    - SQLALCHEMY_SILENCE_UBER_WARNING=1
+    - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
+    - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+    - SUPERADMIN_ORG=admin
+    - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+    - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    - S3_SECRET_KEY=${S3_SECRET_KEY}
+    - S3_REGION=${S3_REGION}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+  db:
+    image: postgres:15-alpine
+    ports:
+    - 5432:5432
+    environment:
+      - POSTGRES_USER=dummy_pg_user
+      - POSTGRES_PASSWORD=dummy_pg_pwd
+      - POSTGRES_DB=dummy_pg_db
+    healthcheck:
+      test: [CMD-SHELL, sh -c 'pg_isready -U dummy_pg_user -d dummy_pg_db']
+      interval: 20s
+      timeout: 10s
+      retries: 10
+  # ref link: https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.4.0
+    ports:
+    - 4566:4566
+    # environment variables details: https://docs.localstack.cloud/references/configuration/
+    environment:
+    - EDGE_PORT=4566
+    - SERVICES=s3
+    volumes:
+      - ./scripts/localstack:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal --endpoint-url=http://localhost:4566 s3 ls s3://admin"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  pyro_engine:
+    container_name: engine
+    image: pyronear/pyro-engine:v1.0.0
+    profiles:
+      - engine
+    environment:
+    - API_URL=${API_URL}
+    - CAM_USER=${CAM_USER}
+    - CAM_PWD=${CAM_PWD}
+    command: python run.py
+    volumes:
+    - ./data:/usr/src/app/data
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+        max-file: '5'
+    depends_on:
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy
+      reolink_dev:
+        condition: service_healthy
+  etl_scripts:
+    container_name: etl
+    image: pyronear/pyro-etl:latest
+    profiles:
+      - etl
+    environment:
+    - API_URL=${API_URL}
+    - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
+    - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+    command: /bin/sh -c "python /usr/src/app/dl_images.py && python /usr/src/app/predict_load.py"
+    volumes:
+    - ./data:/usr/src/app/data
+    depends_on:
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy
+  init_script:
+    container_name: init
+    image: pyronear/pyro-api-init:latest
+    environment:
+    - API_URL=${API_URL}
+    - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
+    - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+    - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+    - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    - S3_SECRET_KEY=${S3_SECRET_KEY}
+    - S3_REGION=${S3_REGION}
+    volumes:
+    - ./data/:/data/
+    command: sh -c 'python /usr/local/bin/init_script.py && exit 0 || exit 1'
+    depends_on:
+      pyro_api:
+        condition: service_healthy
+  reolink_dev:
+    image: pyronear/dev-reolink:latest
+    profiles:
+      - engine
+    environment:
+    - CAM_USER=${CAM_USER}
+    - CAM_PWD=${CAM_PWD}
+    ports:
+      - "443:444"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev/health'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  reolink_dev2:
+    image: pyronear/reolink-dev2:latest
+    profiles:
+      - engine
+    environment:
+    - CAM_USER=${CAM_USER}
+    - CAM_PWD=${CAM_PWD}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolink_dev2/health'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  frontend:
+    image: pyronear/pyro-platform:v1.0.0
+    command: python index.py --host 0.0.0.0 --port 8050
+    profiles:
+      - front
+    ports:
+      - 8050:8050
+    environment:
+      - API_URL=${API_URL}
+      - API_LOGIN=${SUPERADMIN_LOGIN}
+      - API_PWD=${SUPERADMIN_PWD}
+      - DEBUG=FALSE
+    depends_on:
+      init_script:
+        condition: service_started
+      pyro_api:
+        condition: service_healthy

@@ -1,82 +1,58 @@
-# pyro-devops
+**README**
 
-Deployment and infrastructure management
-
-  
-
-## Getting started
-
-## Structure
-
-The file docker-swarm.yml is used for the docker swarm
-The folder nginx is a demo for a image of a reverse proxy with nginx 
+This Docker Compose configuration sets up a development environment for Pyronear's API along with supporting services like a PostgreSQL database, LocalStack for S3 emulation, Pyro Engine, and Promtail for log shipping.
 
 ### Prerequisites
-
-  
-- Docker swarm
-
-  
-
-### Installation
-
-https://docs.docker.com/get-docker/
-
-https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/
-
-  
-## Security good practice
-https://docs.docker.com/engine/install/linux-postinstall/
-Log your infrastructure and your containers (portainer,...) 
-Run your ssh/administration on a private network (with bastion + vpn)
-https://www.stackrox.com/post/2019/09/docker-security-101/
-AppArmor/ SELinux,failtoban, iptable, waf
-Check your SLA, IT Disastery Recovery process
-Vulnerability assessment and management (VAM)
-Identity and Access Management
-
-## Usage
+- Docker and Docker Compose installed on your system.
+- Precommit hook installed on this repo
 
 
+### Services
+1. **pyro-api**: Runs the Pyronear API using uvicorn.
+2. **db**: PostgreSQL database for the API.
+3. **localstack**: Emulates AWS S3 using LocalStack.
+4. **pyro-engine**: Pyro Engine service.
+5. **reolink_dev**: a service which imitate a reolink camera by sending back pictures of fire.
+6. **frontend**: our webapp available on the 8085 port.
+
+### Usage
+
+First you have to create a .env file, a simple copy of the .env.test would be enough.
+    ```
+    cp .env.test .env
+    ```
+
+Start the Docker services using the following command:
+    ```
+    make build
+    make run
+    ```
+Then, you will be able to connect to the API thanks to the credentials in the .env file
+
+If you want to launch only the engine and two dev-cameras you can use :
+    ```
+    make run-engine
+    ```
+
+you can check that everyhing is working thanks to the following commands :
+    ```
+    docker logs init
+    docker logs engine
+    ```
+
+### Accessing the API
+Once the services are up and running, you can access the Pyronear API at `http://localhost:5050/docs`.
 
 
-Export the variables/secret in your env file (if you don't have a Vault) 
+### Accessing the web-app
+Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
+
+### Cleanup
+To stop and remove the Docker services, run:
 ```
-export BUCKET_MEDIA_FOLDER=media
-...
-```
-  
-If needed build your images (for exemple the mynginx image in the folder nginx) and push it in the local registry
-
-```
-docker run -d -p 5000:5000 --restart=always --name registry registry:2 #start the local registry
-
-docker build -t pyro/mynginx .
-
-docker image tag pyro/mynginx localhost:5000/mynginx
-
-docker push localhost:5000/mynginx:latest
-
-docker pull localhost:5000/mynginx
-```
-
-and after deploy your docker swarm
-```
-
-docker stack deploy -c docker-swarm.yml my_node
-
+make stop
 ```
 
-You can check that the service is running with
+### More images in the Reoling Dev Camera
 
-
-
-```
-
-docker service ls
-
-docker ps
-
-docker service logs xxxxxx
-
-```
+you need to create a directory data/images before launching the env, with the images inside !

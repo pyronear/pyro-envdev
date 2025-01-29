@@ -51,7 +51,7 @@ For that you will have to add this line to you /etc/hosts :
 
 Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
 
-29/01/2024 : For the moment, the ADMIN access doesn't show the alerts sent by the camera. For that you will have to use a user accunt which are defined in data/csv/users.csv
+29/01/2024 : For the moment, the ADMIN access doesn't show the alerts sent by the camera. For that you will have to use a user account which are defined in data/csv/users.csv
 
 ### Launch the web app manually from the pyro-platform directory
 

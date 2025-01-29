@@ -33,8 +33,8 @@ def test_s3_bucket(s3_client):
 
     bucket_contents = s3_client.list_objects_v2(Bucket=response["Buckets"][1]["Name"])
     print(bucket_contents)
-    keys = [item["Key"] for item in bucket_contents.get("Contents", [])]
-    #assert keys != []
+    [item["Key"] for item in bucket_contents.get("Contents", [])]
+    # assert keys != []
 
 
 if __name__ == "__main__":

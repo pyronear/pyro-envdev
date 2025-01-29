@@ -35,7 +35,7 @@ def test_detections_count(db_connection):
     cursor.execute("SELECT count(*) FROM detections")
 
     # Fetch the result
-    result = cursor.fetchone()[0]
+    cursor.fetchone()[0]
 
     # Close the cursor
     cursor.close()

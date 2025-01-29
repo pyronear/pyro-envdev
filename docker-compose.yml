@@ -76,12 +76,6 @@ services:
       options:
         max-size: 100m
         max-file: '5'
-    healthcheck:
-      test: ["CMD-SHELL", "grep 'confidence' /var/log/engine.log || exit 1"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 5s
     depends_on:
       init_script:
         condition: service_started

@@ -52,5 +52,5 @@ jobs:
 
     - name: Check container logs for errors
       run: |-
-        docker-compose logs --tail=20 | grep -i -E "error|exception" | grep -v -i "hypercorn.error"
+        docker compose logs --tail=20 | grep -i -E "error|exception" | grep -v -i "hypercorn.error"
         exit 0

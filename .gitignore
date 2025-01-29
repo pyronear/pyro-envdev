@@ -131,3 +131,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+model_metadata.json
+metadata.yaml
+model_ncnn.py
+model.ncnn.bin
+model.ncnn.param
+*.zip

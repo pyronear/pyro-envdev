@@ -18,22 +18,23 @@ This Docker Compose configuration sets up a development environment for Pyronear
 ### Usage
 
 Start the Docker services using the following command:
-    ```
-    make build
-    make run
-    ```
+```bash
+make build
+make run
+```
+
 Then, you will be able to connect to the API thanks to the credentials in the .env file
 
 If you want to launch only the engine and two dev-cameras you can use :
-    ```
-    make run-engine
-    ```
+```bash
+make run-engine
+```
 
 you can check that everyhing is working thanks to the following commands :
-    ```
-    docker logs init
-    docker logs engine
-    ```
+```bash
+docker logs init
+docker logs engine
+```
 
 ### Accessing the API
 Once the services are up and running, you can access the Pyronear API at `http://localhost:5050/docs`.
@@ -42,9 +43,11 @@ Once the services are up and running, you can access the Pyronear API at `http:/
 ### Accessing the web-app
 Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
 
+29/01/2024 : For the moment, the ADMIN access doesn't show the alerts sent by the camera. For that you will have to use a user accunt which are defined in data/csv/users.csv
+
 ### Cleanup
 To stop and remove the Docker services, run:
-```
+```bash
 make stop
 ```
 

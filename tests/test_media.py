@@ -29,11 +29,9 @@ def s3_client():
 def test_s3_bucket(s3_client):
     response = s3_client.list_buckets()
     assert response["Buckets"][0]["Name"] == "admin"
-    assert response["Buckets"][1]["Name"] == "organization1"
+    assert response["Buckets"][1]["Name"].endswith("-alert-api-1")
 
-
-def test_s3_content(s3_client):
-    bucket_contents = s3_client.list_objects_v2(Bucket="organization1")
+    bucket_contents = s3_client.list_objects_v2(Bucket=response["Buckets"][1]["Name"])
     print(bucket_contents)
     keys = [item["Key"] for item in bucket_contents.get("Contents", [])]
     assert keys != []

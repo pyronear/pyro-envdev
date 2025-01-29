@@ -17,11 +17,6 @@ This Docker Compose configuration sets up a development environment for Pyronear
 
 ### Usage
 
-First you have to create a .env file, a simple copy of the .env.test would be enough.
-    ```
-    cp .env.test .env
-    ```
-
 Start the Docker services using the following command:
     ```
     make build

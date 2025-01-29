@@ -30,7 +30,7 @@ jobs:
       run: sleep 120
 
     - name: Check container health
-      run: docker-compose ps --filter "status=unhealthy" --quiet
+      run: docker compose ps --filter "status=unhealthy" --quiet
       continue-on-error: true
       id: check_health
 
@@ -50,7 +50,11 @@ jobs:
     - name: launch tests
       run: pytest tests/*
 
-    - name: Check container logs for errors
-      run: |-
-        docker compose logs --tail=20 | grep -i -E "error|exception" | grep -v -i "hypercorn.error"
-        exit 0
+    - name: Capture logs
+      run: docker compose logs --tail=20 > logs.txt
+
+    - name: Show logs
+      run: cat logs.txt
+
+    - name: Filter logs
+      run: cat logs.txt | grep -i -E "error|exception" | grep -v -i "hypercorn.error"

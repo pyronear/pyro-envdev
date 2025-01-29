@@ -27,7 +27,7 @@ jobs:
 
       # Wait for containers to start up (adjust the sleep time as needed)
     - name: Wait for containers to start
-      run: sleep 60
+      run: sleep 120
 
     - name: Check container health
       run: docker-compose ps --filter "status=unhealthy" --quiet

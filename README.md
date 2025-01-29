@@ -17,7 +17,12 @@ This Docker Compose configuration sets up a development environment for Pyronear
 
 ### Usage
 
- Start the Docker services using the following command:
+First you have to create a .env file, a simple copy of the .env.test would be enough.
+    ```
+    cp .env.test .env
+    ```
+
+Start the Docker services using the following command:
     ```
     make build
     make run
@@ -50,6 +55,4 @@ make stop
 
 ### More images in the Reoling Dev Camera
 
-you need to create a directory data/images before launching the env, with the images inside :)
-
-This Docker Compose setup provides a comprehensive development environment for working with Pyronear's API and supporting services.
+you need to create a directory data/images before launching the env, with the images inside !

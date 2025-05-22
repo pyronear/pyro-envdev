@@ -56,6 +56,7 @@ def write_json_file(file_path, data):
 api_url = os.environ.get("API_URL") + "/api/v1"
 superuser_login = os.environ.get("SUPERADMIN_LOGIN")
 superuser_pwd = os.environ.get("SUPERADMIN_PWD")
+slack_hook = os.environ.get("SLACK_HOOK")
 credentials_path = "data/credentials.json"
 credentials_path_etl = "data/credentials-wildfire.json"
 
@@ -76,6 +77,12 @@ for orga in organizations.itertuples(index=False):
     logging.info(f"saving orga : {orga.name}")
     payload = {"name": orga.name}
     api_request("post", f"{api_url}/organizations/", superuser_auth, payload)
+    
+    # ACTIVATE SLACK NOTIFICATION
+    if slack_hook:
+        logging.info(f"Notifications slack activés")
+        payload = {"slack_hook": slack_hook }
+        result = api_request("patch", f"{api_url}/organizations/slack-hook/{orga.id}", superuser_auth, payload)
 
 
 for user in users.itertuples(index=False):
@@ -105,6 +112,7 @@ for camera in cameras.itertuples(index=False):
         "last_active_at": camera.last_active_at,
     }
     id = api_request("post", f"{api_url}/cameras/", superuser_auth, payload)["id"]
+    logging.info(f"Caméra créé, id : {str(id)}")
     result = api_request("post", f"{api_url}/cameras/{id}/token", superuser_auth)
 
     camera_token = result["access_token"]

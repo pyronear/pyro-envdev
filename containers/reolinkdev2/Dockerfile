@@ -14,10 +14,10 @@ WORKDIR /app
 RUN pip install --no-cache-dir flask==3.0.3
 
 # Copy the Flask server files into the container
-COPY reolinkcamera.py /app/
+COPY reolinkdev2.py /app/
 
 # Expose port 5000 for Flask server
 EXPOSE 443
 
 # Command to run the Flask server
-CMD ["python", "/app/reolinkcamera.py"]
+CMD ["python", "/app/reolinkdev2.py"]

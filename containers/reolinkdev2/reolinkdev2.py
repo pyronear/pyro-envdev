@@ -13,7 +13,7 @@ def generate_ssl_certificates():
     os.system("openssl genrsa -out key.pem 2048")
 
     # Generate a Certificate Signing Request (CSR) non-interactively
-    os.system("openssl req -new -key key.pem -out csr.pem -subj '/CN=reolink_dev2'")
+    os.system("openssl req -new -key key.pem -out csr.pem -subj '/CN=reolinkdev2'")
 
     # Generate a self-signed certificate
     os.system("openssl x509 -req -days 365 -in csr.pem -signkey key.pem -out cert.pem")
@@ -31,9 +31,10 @@ images_name = [
     "1465065360_-00240.jpg",
     "1465065780_+00180.jpg",
     "1465066800_+01200.jpg",
+    "1465066800_+01800.jpg",
     "1465068000_+02400.jpg",
 ]
-url = "https://github.com/pyronear/pyro-devops/releases/download/v0.0.1/"
+url = "https://github.com/pyronear/pyro-envdev/releases/download/v0.0.1/"
 
 if not os.path.isfile(image_dir):
     os.makedirs(image_dir, exist_ok=True)

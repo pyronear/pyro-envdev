@@ -2,8 +2,8 @@
 
 build:
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
-	docker build -f containers/dev_reolink/Dockerfile -t pyronear/dev-reolink:latest containers/dev_reolink/
-	docker build -f containers/reolink_dev2/Dockerfile -t pyronear/reolink-dev2:latest containers/reolink_dev2/
+	docker build -f containers/reolinkdev1/Dockerfile -t pyronear/reolinkdev1:latest containers/reolinkdev1/
+	docker build -f containers/reolinkdev2/Dockerfile -t pyronear/reolinkdev2:latest containers/reolinkdev2/
 
 build-external:
 	cd ../pyro-api/; make build
@@ -15,19 +15,15 @@ build-external:
 build-all: build build-external
 
 run-api:
-	cp .env.test .env
 	docker compose up -d
 
 run-engine:
-	cp .env.test .env
 	docker compose --profile engine up -d
 
 run-etl:
-	cp .env.test .env
 	docker compose --profile etl up -d
 
 run:
-	cp .env.test .env
 	docker compose --profile front --profile engine up -d
 
 stop:

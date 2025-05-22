@@ -14,10 +14,10 @@ WORKDIR /app
 RUN pip install --no-cache-dir flask==3.0.3
 
 # Copy the Flask server files into the container
-COPY reolink_dev2.py /app/
+COPY reolinkdev1.py /app/
 
 # Expose port 5000 for Flask server
 EXPOSE 443
 
 # Command to run the Flask server
-CMD ["python", "/app/reolink_dev2.py"]
+CMD ["python", "/app/reolinkdev1.py"]

@@ -1,0 +1,3 @@
+pandas
+pillow
+pyroclient @ git+https://github.com/pyronear/pyro-api.git@c45d5c0f3f22979fe9f74fdd0d831a3a8b911b54#subdirectory=client

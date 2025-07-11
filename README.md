@@ -12,7 +12,7 @@ This Docker Compose configuration sets up a development environment for Pyronear
 2. **db**: PostgreSQL database for the API.
 3. **localstack**: Emulates AWS S3 using LocalStack.
 4. **pyro-engine**: Pyro Engine service.
-5. **reolink_dev**: a service which imitate a reolink camera by sending back pictures of fire.
+5. **reolinkdev**: a service which imitate a reolink camera by sending back pictures of fire.
 6. **frontend**: our webapp available on the 8085 port.
 
 ### Usage

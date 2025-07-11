@@ -144,7 +144,7 @@ services:
       timeout: 10s
       retries: 5
   frontend:
-    image: pyronear/pyro-platform:v1.0.0
+    image: pyronear/pyro-platform:latest
     command: python index.py --host 0.0.0.0 --port 8050
     profiles:
       - front

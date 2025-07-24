@@ -138,3 +138,7 @@ model_ncnn.py
 model.ncnn.bin
 model.ncnn.param
 *.zip
+selection-true-positives
+
+data/credentials.json
+data/credentials-wildfire.json

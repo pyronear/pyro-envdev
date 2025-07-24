@@ -77,12 +77,17 @@ for orga in organizations.itertuples(index=False):
     logging.info(f"saving orga : {orga.name}")
     payload = {"name": orga.name}
     api_request("post", f"{api_url}/organizations/", superuser_auth, payload)
-    
+
     # ACTIVATE SLACK NOTIFICATION
     if slack_hook:
-        logging.info(f"Notifications slack activés")
-        payload = {"slack_hook": slack_hook }
-        result = api_request("patch", f"{api_url}/organizations/slack-hook/{orga.id}", superuser_auth, payload)
+        logging.info("Notifications slack activés")
+        payload = {"slack_hook": slack_hook}
+        result = api_request(
+            "patch",
+            f"{api_url}/organizations/slack-hook/{orga.id}",
+            superuser_auth,
+            payload,
+        )
 
 
 for user in users.itertuples(index=False):

@@ -24,6 +24,9 @@ run-etl:
 	docker compose --profile etl up -d
 
 run:
+	docker compose --profile front up -d
+
+run-all:
 	docker compose --profile front --profile engine up -d
 
 stop:

@@ -137,7 +137,9 @@ notebooks/send_real_alerts.ipynb
 ```
 
 Then, you will be able to connect to the API thanks to the credentials in the .env file
-
+Note : if the notebook is run in a container, please change the following variable
+in the files .ipynb
+API_URL = "http://api:5050"
 
 ## Cleanup
 To stop and remove the Docker services, run:

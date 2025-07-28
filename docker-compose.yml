@@ -169,6 +169,7 @@ services:
     volumes:
       - ./containers/notebooks/app:/app/notebooks
       - ./data:/app/data
+      - .env:/app/.env
   db-ui:
     image: dpage/pgadmin4
     profiles:

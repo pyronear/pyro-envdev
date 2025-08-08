@@ -114,7 +114,6 @@ for camera in cameras.itertuples(index=False):
         "lat": camera.lat,
         "lon": camera.lon,
         "is_trustable": camera.is_trustable,
-        "last_active_at": camera.last_active_at,
     }
     id = api_request("post", f"{api_url}/cameras/", superuser_auth, payload)["id"]
     logging.info(f"Caméra créé, id : {str(id)}")

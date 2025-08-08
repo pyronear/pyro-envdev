@@ -160,3 +160,39 @@ services:
         condition: service_started
       pyro_api:
         condition: service_healthy
+  notebooks:
+    image: pyronear/notebooks:latest
+    profiles:
+      - tools
+    ports:
+      - 8889:8888
+    volumes:
+      - ./containers/notebooks/app:/app/notebooks
+      - ./data:/app/data
+      - .env:/app/.env
+  db-ui:
+    image: dpage/pgadmin4
+    profiles:
+      - tools
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${DB_UI_MAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${DB_UI_PWD}
+    depends_on:
+      - db
+  s3manager:
+    image: cloudlena/s3manager
+    profiles:
+      - tools
+    ports:
+      - 8080:8080
+    environment:
+      - ENDPOINT=localstack:4566
+      - REGION=${S3_REGION}
+      - ACCESS_KEY_ID=${S3_ACCESS_KEY}
+      - SECRET_ACCESS_KEY=${S3_SECRET_KEY}
+      - USE_SSL=false
+    depends_on:
+      - localstack

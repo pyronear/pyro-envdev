@@ -56,6 +56,13 @@ If you want to launch only the additional tools, you can use :
 make run-tools
 ```
 
+Also you need to tell your computer where your S3 is.
+For that you will have to add this line to you /etc/hosts :
+
+```bash
+127.0.0.1 minio
+```
+
 ### Running customized alerts using personal notebooks (not in docker)
 
 Install the notebook dependencies:

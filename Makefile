@@ -15,7 +15,7 @@ build-external:
 
 build-all: build build-external
 
-run-api:
+run-backend:
 	docker compose up -d
 
 run-engine:

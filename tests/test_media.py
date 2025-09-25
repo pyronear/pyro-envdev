@@ -7,7 +7,7 @@ import pytest
 load_dotenv()
 
 # Get S3 endpoint URL and credentials from environment variables
-s3_endpoint_url = "http://localhost:4566/"
+s3_endpoint_url = os.getenv("S3_ENDPOINT_URL") + "/"
 s3_access_key = os.getenv("S3_ACCESS_KEY")
 s3_secret_key = os.getenv("S3_SECRET_KEY")
 s3_region = os.getenv("S3_REGION")

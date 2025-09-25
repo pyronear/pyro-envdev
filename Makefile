@@ -35,7 +35,7 @@ run-all:
 	docker compose --profile front --profile engine up -d
 
 stop:
-	docker compose --profile front --profile engine --profile etl down
+	docker compose --profile front --profile engine --profile etl down -v
 
 test:
 	pytest -s tests/*

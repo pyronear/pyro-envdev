@@ -1,0 +1,25 @@
+{
+  "id": 10538,
+  "camera_id": 41,
+  "azimuth": 190,
+  "is_wildfire": 1.0,
+  "started_at": "2025-07-14T11:24:31.405000",
+  "last_seen_at": "2025-07-14T12:25:03.515000",
+  "cone_azimuth": 163.3878,
+  "cone_angle": 0.9756,
+  "name": "croix-augas-02",
+  "angle_of_view": 54.2,
+  "lat": 48.4267461256,
+  "lon": 2.7108759097,
+  "site_name": "croix-augas",
+  "started_at_local": "2025-07-14 13:24",
+  "last_seen_at_local": "2025-07-14 14:25",
+  "overlap": [
+    [
+      10535,
+      10537,
+      10538
+    ]
+  ],
+  "camera": "croix-augas : 190"
+}

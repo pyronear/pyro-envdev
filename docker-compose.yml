@@ -145,11 +145,10 @@ services:
       retries: 5
   frontend:
     image: pyronear/pyro-platform:latest
-    command: python index.py --host 0.0.0.0 --port 8050
     profiles:
       - front
     ports:
-      - 8050:8050
+      - 80:8050
     environment:
       - API_URL=${API_URL}
       - API_LOGIN=${SUPERADMIN_LOGIN}

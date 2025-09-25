@@ -1,0 +1,102 @@
+[
+  {
+    "id": 436421,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112431-d1a16c83.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:31.405329",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112431-d1a16c83.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055324Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=d17a3fe05c0717b2a74af9c9883eed7e8a1d5ba6c28ddf4cb473e0317026a64c"
+  },
+  {
+    "id": 436422,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112432-091153ee.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:32.336345",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112432-091153ee.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055324Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=22fa3d30a1ff03322997aadf279bb17c8379b93270ec1f45b0d9336e77fb29ab"
+  },
+  {
+    "id": 436423,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112433-b966b57a.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:33.297084",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112433-b966b57a.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055324Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=e76ff46cee3a3078764eeef18e4eb7d3009b756bf9b2b7697627569d6716bfb7"
+  },
+  {
+    "id": 436424,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112434-bc27e795.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:34.244964",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112434-bc27e795.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055324Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=2e3690519b588e547c0765d69a4332a2d09bacb5708d82a220150a45fdfef76c"
+  },
+  {
+    "id": 436425,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112434-e7a60517.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:35.011390",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112434-e7a60517.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=d7318b638d0238237085cb4efdbbe01f2ba240e65db8a4b55a97d3680c9af8e0"
+  },
+  {
+    "id": 436426,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112435-dda07c8b.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:35.810877",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112435-dda07c8b.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=12edecb1a8480783fc728a92bc99e09de06d39a1e4f315a2d07215c8e3813105"
+  },
+  {
+    "id": 436427,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112436-36eb4f51.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:36.616605",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112436-36eb4f51.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=daca638f4fd123f94bd607bee4b0f77f8eac0f105cc0cfa309cbabc93b45fcd5"
+  },
+  {
+    "id": 436428,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112437-14b4c0d9.jpg",
+    "bboxes": "[(0,0.530,0.018,0.553,0.183)]",
+    "created_at": "2025-07-14T11:24:37.477896",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112437-14b4c0d9.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=c32d6aa77c7177ddbabac044060eb58664e3f52ae86eaa910f4684974974d032"
+  },
+  {
+    "id": 436430,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112500-bb411ceb.jpg",
+    "bboxes": "[(0,0.528,0.025,0.552,0.148)]",
+    "created_at": "2025-07-14T11:25:00.727296",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112500-bb411ceb.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=f3fa041caf009216f5c02801494799dd2550fe639fe67531ec6c730dd25a5962"
+  },
+  {
+    "id": 436433,
+    "camera_id": 41,
+    "sequence_id": 10538,
+    "azimuth": 190,
+    "bucket_key": "41-20250714112531-44a4b2e1.jpg",
+    "bboxes": "[(0,0.492,0.027,0.551,0.408)]",
+    "created_at": "2025-07-14T11:25:31.461714",
+    "url": "https://s3.sbg.io.cloud.ovh.net/ovh-alert-api-prod-v2-alert-api-7/41-20250714112531-44a4b2e1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=6d0b52f50fe147da997228e1ded799d4%2F20250917%2Fsbg%2Fs3%2Faws4_request&X-Amz-Date=20250917T055325Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=d64d6fce2b1781258155ff0ddef13fa028bc67a27121aa7294e82134610f1a1c"
+  }
+]

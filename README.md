@@ -96,10 +96,6 @@ API_URL=http://localhost:5050
 ### Access the service notebooks
 Access at the address :  http://localhost:8889/
 
-For the first connection, open the logs of the container.
-Copy the token and save it for later (to login in the service)
-
-
 ### Access the service db-ui
 You can access the db-ui service (pgadmin) at `http://localhost:8888/browser/`
 

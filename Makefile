@@ -1,11 +1,6 @@
 # Makefile
 # Build and run local stack for Pyronear
 
-SHELL := /bin/sh
-COMPOSE := docker compose
-
-.PHONY: help init build build-external build-all run-backend run-engine run-tools run run-all stop ps logs test
-
 help:
 	@echo "Targets:"
 	@echo "  init            Create .env from .env.test if missing"
@@ -56,30 +51,30 @@ build-all: build build-external
 # -------------------------------------------------------------------
 
 run-backend:
-	$(COMPOSE) up -d
+	docker compose  up -d
 
 run-engine:
-	$(COMPOSE) --profile engine up -d
+	docker compose  --profile engine up -d
 
 run-tools:
-	$(COMPOSE) --profile tools up -d
+	docker compose  --profile tools up -d
 
 # Start everything except the engine: base services plus front + tools
 run:
-	$(COMPOSE) --profile front --profile tools up -d
+	docker compose  --profile front --profile tools up -d
 
 # Start everything including the engine
 run-all:
-	$(COMPOSE) --profile front --profile tools --profile engine up -d
+	docker compose  --profile front --profile tools --profile engine up -d
 
 stop:
-	$(COMPOSE) --profile front --profile engine --profile tools down -v
+	docker compose  --profile front --profile engine --profile tools down -v
 
 ps:
-	$(COMPOSE) ps
+	docker compose  ps
 
 logs:
-	$(COMPOSE) logs -f --tail=200
+	docker compose  logs -f --tail=200
 
 # -------------------------------------------------------------------
 # Tests

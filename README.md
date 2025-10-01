@@ -1,11 +1,11 @@
 **README**
 
-This Docker Compose configuration sets up a development environment for Pyronear's API along with supporting services like a PostgreSQL database, LocalStack for S3 emulation, Pyro Engine, and Promtail for log shipping.
+This Docker Compose configuration sets up a development environment for Pyronear's API along with supporting services like a PostgreSQL database, MinIO for S3 emulation, Pyro Engine, and Promtail for log shipping.
 
 ## Services
 1. **pyro-api**: Runs the Pyronear API using uvicorn.
 2. **db**: PostgreSQL database for the API.
-3. **localstack**: Emulates AWS S3 using LocalStack.
+3. **minio**: Emulates AWS S3 using [MinIO](https://github.com/minio/minio).
 4. **pyro-engine**: Pyro Engine service.
 5. **reolinkdev**: a service which imitate a reolink camera by sending back pictures of fire.
 6. **frontend**: our webapp available on the 8085 port.
@@ -14,8 +14,6 @@ This Docker Compose configuration sets up a development environment for Pyronear
    _Additional services (helpers):_
 7. **notebooks** : Python notebook server to run scripts on api without having to install python
 8. **db-ui** (pgadmin): UI to visualize and manipulate the data in PostgreSQL database
-9. **s3manager**: UI to visualize and manipulate the data in S3 LocalStack
-
 
 ## Installation
 ### Prerequisites
@@ -48,9 +46,21 @@ If you want to launch only the engine and two dev-cameras you can use :
 make run-engine
 ```
 
+If you want to launch only the backend (in order to develop the frontend) :
+```bash
+make run-backend
+```
+
 If you want to launch only the additional tools, you can use :
 ```bash
 make run-tools
+```
+
+Also you need to tell your computer where your S3 is.
+For that you will have to add this line to you /etc/hosts :
+
+```bash
+127.0.0.1 minio
 ```
 
 ### Running customized alerts using personal notebooks (not in docker)
@@ -67,14 +77,7 @@ pip install -r notebooks/requirements.txt
 Once the services are up and running, you can access the Pyronear API at `http://localhost:5050/docs`.
 
 
-### Accessing the web-app
-
-First you need to tell your computer where your S3 is.
-For that you will have to add this line to you /etc/hosts :
-
-```bash
-127.0.0.1 www.localstack.com localstack
-```
+### Accessing the Dash web-app
 
 Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
 
@@ -82,10 +85,10 @@ Since Dash can be a bit capricious, you should launch a private window from you 
 
 ### Launch the web app manually from the pyro-platform directory
 
-You can launch the API :
+You can launch the backend (alert-api, postgresdb & s3) :
 
 ```bash
-make run-api
+make run-backend
 ```
 
 And, in your pyro-platform/.env use this API_URL env var :
@@ -109,13 +112,13 @@ At the first connection, the db server must be configured:
 - User : see POSTGRES_USER in .env
 - Password : see POSTGRES_PASSWORD in .env
 
-### Access the service S3manager
-You can access the s3-ui service (s3manager) at `http://localhost:8080`
-And then upload/download and delete files
+### Access the S3 GUI MinIO console
+You can access S3 GUI MinIO console at `http://localhost:9001/`
+And then upload/download/delete files, create buckets.
 
 ## How to use data
 #### How to update the last image for a camera
-- In s3manager, open the directory finishing by "...-alert-api-{organisation_id}" and upload the image
+- In S3 GUI MinIO console, open the directory finishing by "...-alert-api-{organisation_id}" and upload the image
 - In db-ui, open the table "cameras" and update
     - the column last_image with the filename from above
     - the column last_active_at

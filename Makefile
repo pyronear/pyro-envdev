@@ -15,7 +15,7 @@ build-external:
 
 build-all: build build-external
 
-run-api:
+run-backend:
 	docker compose up -d
 
 run-engine:
@@ -35,7 +35,7 @@ run-all:
 	docker compose --profile front --profile engine up -d
 
 stop:
-	docker compose --profile front --profile engine --profile etl down
+	docker compose --profile front --profile engine --profile etl --profile tools down -v
 
 test:
 	pytest -s tests/*

@@ -4,6 +4,19 @@ This repository provides a Docker Compose configuration to run a full Pyronear d
 
 ---
 
+## ⚙️ Installation
+
+### Prerequisites
+
+* Docker and Docker Compose
+* Add this line to `/etc/hosts` so the MinIO endpoint resolves correctly:
+
+  ```
+  127.0.0.1 minio
+  ```
+
+---
+
 ## 🚀 Quick Start
 
 ### Init
@@ -36,20 +49,6 @@ make run
 * **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
 * **notebooks**: Jupyter server to run helper notebooks
 * **db-ui**: pgAdmin to browse/manage the database
-
----
-
-## ⚙️ Installation
-
-### Prerequisites
-
-* Docker and Docker Compose
-* Pre-commit hook installed in this repo
-* Add this line to `/etc/hosts` so the MinIO endpoint resolves correctly:
-
-  ```
-  127.0.0.1 minio
-  ```
 
 ---
 

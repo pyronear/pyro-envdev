@@ -1,5 +1,5 @@
 # Makefile
-# Build and run local stack for Pyronear
+# Build and run the local stack for Pyronear
 
 help:
 	@echo "Targets:"
@@ -7,11 +7,11 @@ help:
 	@echo "  build           Build local images in this repo"
 	@echo "  build-external  Build images in sibling repos"
 	@echo "  build-all       Build local and external images"
-	@echo "  run-backend     Start base services without profiles"
-	@echo "  run-engine      Start engine profile only"
-	@echo "  run-tools       Start tools profile only"
-	@echo "  run             Start everything except engine"
-	@echo "  run-all         Start everything including engine"
+	@echo "  run-backend     Start base services only"
+	@echo "  run-engine      Start base services plus engine profile"
+	@echo "  run-tools       Start base services plus tools profile"
+	@echo "  run             Start base services plus front and tools profiles"
+	@echo "  run-all         Start base services plus front tools and engine profiles"
 	@echo "  stop            Stop and remove all services and volumes"
 	@echo "  ps              Show compose status"
 	@echo "  logs            Follow logs"
@@ -50,31 +50,34 @@ build-all: build build-external
 # Run targets
 # -------------------------------------------------------------------
 
+# Base services: db, minio, pyro_api, init_script
 run-backend:
-	docker compose  up -d
+	docker compose up -d
 
+# Engine profile adds pyro_engine, reolinkdev1, reolinkdev2
 run-engine:
-	docker compose  --profile engine up -d
+	docker compose --profile engine up -d
 
+# Tools profile adds notebooks, db-ui
 run-tools:
-	docker compose  --profile tools up -d
+	docker compose --profile tools up -d
 
-# Start everything except the engine: base services plus front + tools
+# Front profile adds frontend, here we also include tools
 run:
-	docker compose  --profile front --profile tools up -d
+	docker compose --profile front --profile tools up -d
 
-# Start everything including the engine
+# Everything including engine
 run-all:
-	docker compose  --profile front --profile tools --profile engine up -d
+	docker compose --profile front --profile tools --profile engine up -d
 
 stop:
-	docker compose  --profile front --profile engine --profile tools down -v
+	docker compose --profile front --profile engine --profile tools down -v
 
 ps:
-	docker compose  ps
+	docker compose ps
 
 logs:
-	docker compose  logs -f --tail=200
+	docker compose logs -f --tail=200
 
 # -------------------------------------------------------------------
 # Tests

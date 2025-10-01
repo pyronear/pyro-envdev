@@ -109,14 +109,6 @@ docker logs engine
 
 ## 📂 Data Usage
 
-### Update the last image for a camera
-
-1. Upload a new image in MinIO under the bucket ending with `...-alert-api-{organisation_id}`
-2. In pgAdmin, update the `cameras` table:
-
-   * `last_image` with the filename
-   * `last_active_at` timestamp
-
 ### Add more images to Reolink Dev
 
 Create a directory `data/images` before starting the environment and put your images inside.
@@ -128,6 +120,16 @@ When running notebooks **inside Docker**, set:
 
 ```python
 API_URL = "http://api:5050"
+
+### Update the last image for a camera
+
+1. Upload a new image in MinIO under the bucket ending with `...-alert-api-{organisation_id}`
+2. In pgAdmin, update the `cameras` table:
+
+   * `last_image` with the filename
+   * `last_active_at` timestamp
+
+
 ```
 
 ---

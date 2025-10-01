@@ -1,147 +1,142 @@
-**README**
+# Pyronear Dev Environment
 
-This Docker Compose configuration sets up a development environment for Pyronear's API along with supporting services like a PostgreSQL database, MinIO for S3 emulation, Pyro Engine, and Promtail for log shipping.
+This repository provides a Docker Compose configuration to run a full Pyronear development environment with the API, database, S3 emulation, frontend, notebooks, and optional camera engine.
 
-## Services
-1. **pyro-api**: Runs the Pyronear API using uvicorn.
-2. **db**: PostgreSQL database for the API.
-3. **minio**: Emulates AWS S3 using [MinIO](https://github.com/minio/minio).
-4. **pyro-engine**: Pyro Engine service.
-5. **reolinkdev**: a service which imitate a reolink camera by sending back pictures of fire.
-6. **frontend**: our webapp available on the 8085 port.
+---
 
+## 🚀 Quick Start
 
-   _Additional services (helpers):_
-7. **notebooks** : Python notebook server to run scripts on api without having to install python
-8. **db-ui** (pgadmin): UI to visualize and manipulate the data in PostgreSQL database
+### Init
 
-## Installation
+```bash
+make init
+make build
+```
+
+### Run
+
+```bash
+make run
+```
+
+* Send an alert by opening [http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb](http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb)
+* Observe the alert on the frontend at [http://0.0.0.0:8050/](http://0.0.0.0:8050/)
+* Use credentials from `data/csv/API_DATA_DEV/users.csv`
+* Or check directly on the API at [http://0.0.0.0:5050/docs](http://0.0.0.0:5050/docs) with the same creds
+
+---
+
+## 🧩 Services
+
+* **pyro-api**: Pyronear API (uvicorn)
+* **db**: PostgreSQL database
+* **minio**: S3-compatible storage (via MinIO)
+* **frontend**: Web app (Dash)
+* **pyro-engine**: Engine service (requires cameras, optional)
+* **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
+* **notebooks**: Jupyter server to run helper notebooks
+* **db-ui**: pgAdmin to browse/manage the database
+
+---
+
+## ⚙️ Installation
+
 ### Prerequisites
-- Docker and Docker Compose installed on your system.
-- Precommit hook installed on this repo
 
-### Running everything (engine + predefined alerts)
+* Docker and Docker Compose
+* Pre-commit hook installed in this repo
+* Add this line to `/etc/hosts` so the MinIO endpoint resolves correctly:
 
-Start the Docker services using the following commands:
+  ```
+  127.0.0.1 minio
+  ```
+
+---
+
+## ▶️ Running
+
+### Full stack with engine
 
 ```bash
 make build
 make run-all
 ```
 
-This will launch the full stack including the engine and the predefined alert generation.
+This launches everything including the engine and simulated alerts.
+You can check health with:
 
----
-
-you can check that everyhing is working thanks to the following commands :
 ```bash
 docker logs init
 docker logs engine
 ```
 
+### Partial runs
 
-### Running services partially
-If you want to launch only the engine and two dev-cameras you can use :
-```bash
-make run-engine
-```
+* Backend only (API, DB, S3):
 
-If you want to launch only the backend (in order to develop the frontend) :
-```bash
-make run-backend
-```
+  ```bash
+  make run-backend
+  ```
+* Engine only:
 
-If you want to launch only the additional tools, you can use :
-```bash
-make run-tools
-```
+  ```bash
+  make run-engine
+  ```
+* Tools only (notebooks, db-ui):
 
-Also you need to tell your computer where your S3 is.
-For that you will have to add this line to you /etc/hosts :
+  ```bash
+  make run-tools
+  ```
 
-```bash
-127.0.0.1 minio
-```
+---
 
-### Running customized alerts using personal notebooks (not in docker)
+## 🔑 Access
 
-Install the notebook dependencies:
+* **API**: [http://localhost:5050/docs](http://localhost:5050/docs)
+* **Frontend (Dash app)**: [http://localhost:8050](http://localhost:8050)
 
-```bash
-pip install -r notebooks/requirements.txt
-```
+  * If issues: use a private browser window
+  * Admin access currently does not display camera alerts, use user creds from `data/csv/users.csv`
+* **Notebooks**: [http://localhost:8889](http://localhost:8889)
+* **pgAdmin (db-ui)**: [http://localhost:8888/browser/](http://localhost:8888/browser/)
 
+  * Login: `DB_UI_MAIL` / `DB_UI_PWD` (set in `.env`)
+  * First connection: register server with host `db`, user/password from `.env`
+* **MinIO console (S3 GUI)**: [http://localhost:9001](http://localhost:9001)
 
-## Access
-### Accessing the API
-Once the services are up and running, you can access the Pyronear API at `http://localhost:5050/docs`.
+  * Manage buckets, upload/delete files
 
+---
 
-### Accessing the Dash web-app
+## 📂 Data Usage
 
-Since Dash can be a bit capricious, you should launch a private window from you browser and access the web app at `http://localhost:8050`
+### Update the last image for a camera
 
-29/01/2024 : For the moment, the ADMIN access doesn't show the alerts sent by the camera. For that you will have to use a user account which are defined in data/csv/users.csv
+1. Upload a new image in MinIO under the bucket ending with `...-alert-api-{organisation_id}`
+2. In pgAdmin, update the `cameras` table:
 
-### Launch the web app manually from the pyro-platform directory
+   * `last_image` with the filename
+   * `last_active_at` timestamp
 
-You can launch the backend (alert-api, postgresdb & s3) :
+### Add more images to Reolink Dev
 
-```bash
-make run-backend
-```
+Create a directory `data/images` before starting the environment and put your images inside.
 
-And, in your pyro-platform/.env use this API_URL env var :
-```bash
-API_URL=http://localhost:5050
-```
+### Send custom alerts
 
-### Access the service notebooks
-Access at the address :  http://localhost:8889/
+Use Jupyter notebooks (e.g., `notebooks/send_real_alerts.ipynb`).
+When running notebooks **inside Docker**, set:
 
-### Access the service db-ui
-You can access the db-ui service (pgadmin) at `http://localhost:8888/browser/`
-
-Log in with the mail/pwd specified in the env file (`DB_UI_MAIL`/`DB_UI_PWD`)
-
-At the first connection, the db server must be configured:
-- Register a server with those data :
-- Name: "pyro-db"
-- Host name/address: "db"
-- Maintenance database : see POSTGRES_DB in .env
-- User : see POSTGRES_USER in .env
-- Password : see POSTGRES_PASSWORD in .env
-
-### Access the S3 GUI MinIO console
-You can access S3 GUI MinIO console at `http://localhost:9001/`
-And then upload/download/delete files, create buckets.
-
-## How to use data
-#### How to update the last image for a camera
-- In S3 GUI MinIO console, open the directory finishing by "...-alert-api-{organisation_id}" and upload the image
-- In db-ui, open the table "cameras" and update
-    - the column last_image with the filename from above
-    - the column last_active_at
-
-### More images in the Reoling Dev Camera
-you need to create a directory data/images before launching the env, with the images inside !
-
-### How to create alerts
-Use one of the provided notebooks to send custom alerts manually.
-
-For example, to send real alerts based on selected examples, run:
-
-```bash
-notebooks/send_real_alerts.ipynb
-```
-
-Then, you will be able to connect to the API thanks to the credentials in the .env file
-Note : if the notebook is run in a container, please change the following variable
-in the files .ipynb
+```python
 API_URL = "http://api:5050"
+```
 
-## Cleanup
-To stop and remove the Docker services, run:
+---
+
+## 🛑 Cleanup
+
+Stop and remove everything:
+
 ```bash
 make stop
 ```

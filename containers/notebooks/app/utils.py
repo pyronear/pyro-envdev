@@ -1,6 +1,14 @@
+import os
+import io
+import glob
 import numpy as np
 import shutil
+import itertools
+import time
+from PIL import Image
 import requests
+
+from api import get_camera_token
 
 
 def xywh2xyxy(x: np.ndarray):
@@ -108,3 +116,70 @@ def generate_bbox_with_jitter(
     bbox = np.array([(x0, x0, x1, x1, base_conf)])
 
     return bbox
+
+
+def dl_seqs_from_url(url, output_path):
+    """
+    Download sequences zip file, exrtact them in target directory
+    Args:
+        url (string): url to sequences as zip file
+        output_path (string): target directory
+
+    Returns:
+    """
+    response = requests.get(url, stream=True)
+    response.raise_for_status()  # Raises an error for bad status codes
+
+    zip_path = f"{output_path}.zip"
+
+    with open(zip_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    shutil.unpack_archive(zip_path, output_path, "zip")
+    os.remove(zip_path)
+    print("Extraction completed.")
+
+
+def send_triangulated_alerts(
+    cam_triangulation, API_URL, Client, admin_access_token, sleep_seconds=1
+):
+    for cam_id, info in cam_triangulation.items():
+        camera_token = get_camera_token(API_URL, cam_id, admin_access_token)
+        camera_client = Client(camera_token, API_URL)
+        info["client"] = camera_client
+
+        seq_folder = info["path"]
+
+        imgs = glob.glob(f"{seq_folder}/images/*")
+        imgs.sort()
+        preds = glob.glob(f"{seq_folder}/labels_predictions/*")
+        preds.sort()
+
+        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")  # debug
+
+        info["seq_data_pair"] = list(zip(imgs, preds))
+
+    print("Send some entrelaced detections")
+    for files in itertools.zip_longest(
+        *(info["seq_data_pair"] for info in cam_triangulation.values())
+    ):
+        for (cam_id, info), pair in zip(cam_triangulation.items(), files):
+            if pair is None:
+                continue  # len of sequences might be different
+            img_file, pred_file = pair
+            client = info["client"]
+            azimuth = info["azimuth"]
+
+            stream = io.BytesIO()
+            im = Image.open(img_file)
+            im.save(stream, format="JPEG", quality=80)
+
+            with open(pred_file, "r") as file:
+                bboxes = file.read()
+
+            response = client.create_detection(stream.getvalue(), azimuth, eval(bboxes))
+            time.sleep(sleep_seconds)
+
+            response.json()["id"]  # Force a KeyError if the request failed
+            print(f"detection sent for cam {cam_id}")

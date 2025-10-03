@@ -152,3 +152,6 @@ data/.Trash-0
 containers/notebooks/app/.Trash-0
 
 .DS_STORE
+
+data/alert_samples/
+data/triangulated_sequences/

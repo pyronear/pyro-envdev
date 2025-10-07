@@ -250,8 +250,21 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
     df_add.insert(0, "id", range(start_id, start_id + len(df_add)))
 
     out = pd.concat([df_local, df_add[CAMERA_COLUMNS]], ignore_index=True)
+
+    # Rename organization_id to organization_api_id
+    out = out.rename(columns={"organization_id": "organization_api_id"})
+
+    # Build stable mapping from unique organization_api_id -> new organization_id
+    unique_orgs = sorted(out["organization_api_id"].dropna().unique())
+    org_mapping = {org_api: i+2 for i, org_api in enumerate(unique_orgs)}
+
+    # Apply mapping
+    out.insert(1, "organization_id", out["organization_api_id"].map(org_mapping))
+
+    # Save
     out.to_csv(csv_path, index=False)
     print(f"Added {len(df_add)} cameras to {csv_path}")
+
 
 def dl_seqs_in_target_dir(
     sequence_id_list,

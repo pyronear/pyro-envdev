@@ -165,11 +165,15 @@ services:
     profiles:
       - tools
     ports:
-      - 8889:8888
+      - "8889:8888"
     volumes:
       - ./containers/notebooks/app:/app/notebooks
       - ./data:/app/data
-      - .env:/app/.env
+    environment:
+      DISTANT_API_URL: ${DISTANT_API_URL}
+      DISTANT_ALERT_API_LOGIN: ${DISTANT_ALERT_API_LOGIN}
+      DISTANT_ALERT_API_PASSWORD: ${DISTANT_ALERT_API_PASSWORD}
+
   db-ui:
     image: dpage/pgadmin4
     profiles:

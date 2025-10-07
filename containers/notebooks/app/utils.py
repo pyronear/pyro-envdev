@@ -186,14 +186,14 @@ def send_triangulated_alerts(
 
 
 
-CAMERA_COLUMNS = ["id","organization_id","name","angle_of_view","elevation","lat","lon","real_api_id"]
+CAMERA_COLUMNS = ["id","organization_id","name","angle_of_view","elevation","lat","lon","is_trustable","real_api_id"]
 
 def update_local_cameras_csv(cam_ids, cameras, csv_path):
     """
     Ensure that all used distant cameras exist in the local cameras CSV.
 
     New rows are appended when a distant camera id is not present. A new local id is assigned.
-    Only the requested columns are written: id, organization_id, name, angle_of_view, elevation, lat, lon, real_api_id.
+    Only the requested columns are written: id, organization_id, name, angle_of_view, elevation, lat, lon, is_trustable, real_api_id.
 
     Args:
         cam_ids: Iterable of distant camera ids used in the sequences.
@@ -238,12 +238,9 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
         "elevation": df_needed.get("elevation", 0.0),
         "lat": df_needed.get("lat"),
         "lon": df_needed.get("lon"),
+        "is_trustable": df_needed.get("is_trustable"),
         "real_api_id": df_needed["id"].astype(int)
     })
-
-    # defaults where missing
-    df_add["angle_of_view"] = pd.to_numeric(df_add["angle_of_view"], errors="coerce").fillna(54.2)
-    df_add["elevation"] = pd.to_numeric(df_add["elevation"], errors="coerce").fillna(0.0)
 
     # assign new local ids
     start_id = 1 if df_local.empty else int(pd.to_numeric(df_local["id"], errors="coerce").dropna().max() or 0) + 1

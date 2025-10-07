@@ -9,6 +9,7 @@ from PIL import Image
 import requests
 import pandas as pd
 from api import get_camera_token
+import ast
 
 
 def xywh2xyxy(x: np.ndarray):
@@ -141,10 +142,77 @@ def dl_seqs_from_url(url, output_path):
     print("Extraction completed.")
 
 
-def send_triangulated_alerts(
-    cam_triangulation, API_URL, Client, admin_access_token, sleep_seconds=1
+def _to_seq_list(seqs):
+    """Accept a single path or a list, return a list."""
+    if isinstance(seqs, str):
+        return [seqs]
+    return list(seqs)
+
+
+def _build_cam_map_from_paths(seqs_or_path, cameras):
+    """
+    Build a cam map from folder names:
+    {camera_id_in_remote_api}_{camera_name}_{azimuth}_{created_at}
+    We match the first token to cameras.real_api_id, then use cameras.id for the API calls.
+    """
+    sequences = _to_seq_list(seqs_or_path)
+    cam_map = {}
+
+    for seq_path in sequences:
+        folder = os.path.basename(seq_path)
+        parts = folder.split("_")
+
+        # 1) first token is distant real_api_id
+        try:
+            real_api_id = int(parts[0])
+        except ValueError:
+            print(f"Skip {folder}, first token is not an int")
+            continue
+
+        # 2) match camera row by real_api_id
+        row = cameras.loc[cameras["real_api_id"] == real_api_id]
+        if row.empty:
+            print(f"No camera found for real_api_id {real_api_id}, skip {folder}")
+            continue
+
+        # API expects cameras.id
+        cam_id = int(row.iloc[0]["id"])
+
+        # 3) third token is azimuth
+        azimuth = None
+        if len(parts) >= 3:
+            try:
+                azimuth = float(parts[2])
+            except ValueError:
+                print(f"Azimuth not parsed from {folder}, leave None")
+
+        cam_map[cam_id] = {
+            "path": seq_path,
+            "azimuth": azimuth,
+        }
+
+    return cam_map
+
+
+def send_alerts(
+    sequences, cameras, API_URL, Client, admin_access_token, sleep_seconds=0
 ):
-    for cam_id, info in cam_triangulation.items():
+    """
+    Send detections from one or more sequences.
+
+    Args:
+        sequences: either a path to a single sequence folder,
+                   or a list of sequence folder paths.
+        cameras: dataframe containing camera metadata (with "id" and "real_api_id").
+        API_URL: API base URL.
+        Client: client class to interact with the API.
+        admin_access_token: token to retrieve per-camera tokens.
+        sleep_seconds: delay between sends, default = 0s.
+    """
+    cam_map = _build_cam_map_from_paths(sequences, cameras)
+
+    # Prepare clients and pair files
+    for cam_id, info in cam_map.items():
         camera_token = get_camera_token(API_URL, cam_id, admin_access_token)
         camera_client = Client(camera_token, API_URL)
         info["client"] = camera_client
@@ -156,37 +224,65 @@ def send_triangulated_alerts(
         preds = glob.glob(f"{seq_folder}/labels_predictions/*")
         preds.sort()
 
-        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")  # debug
+        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")
 
         info["seq_data_pair"] = list(zip(imgs, preds))
 
     print("Send some entrelaced detections")
     for files in itertools.zip_longest(
-        *(info["seq_data_pair"] for info in cam_triangulation.values())
+        *(info["seq_data_pair"] for info in cam_map.values())
     ):
-        for (cam_id, info), pair in zip(cam_triangulation.items(), files):
+        for (cam_id, info), pair in zip(cam_map.items(), files):
             if pair is None:
-                continue  # len of sequences might be different
-            img_file, pred_file = pair
-            client = info["client"]
-            azimuth = info["azimuth"]
+                continue
 
+            img_file, pred_file = pair
+            azimuth = info.get("azimuth")
+            if azimuth is None:
+                print(f"Skip cam {cam_id}, azimuth is None for {img_file}")
+                continue
+
+            client = info["client"]
+
+            # Read image as JPEG bytes
             stream = io.BytesIO()
             im = Image.open(img_file)
             im.save(stream, format="JPEG", quality=80)
 
-            with open(pred_file, "r") as file:
-                bboxes = file.read()
+            # Read predicted bboxes safely
+            with open(pred_file, "r") as f:
+                txt = f.read()
+            try:
+                bboxes = ast.literal_eval(txt)
+            except Exception as e:
+                print(f"Failed to parse bboxes for {pred_file}: {e}")
+                continue
 
-            response = client.create_detection(stream.getvalue(), azimuth, eval(bboxes))
+            # Send detection
+            try:
+                response = client.create_detection(stream.getvalue(), azimuth, bboxes)
+                payload = response.json()
+                _ = payload["id"]
+                print(f"detection sent for cam {cam_id}")
+            except Exception as e:
+                print(f"Failed to send detection for cam {cam_id}: {e}")
+
             time.sleep(sleep_seconds)
 
-            response.json()["id"]  # Force a KeyError if the request failed
-            print(f"detection sent for cam {cam_id}")
+
+CAMERA_COLUMNS = [
+    "id",
+    "organization_id",
+    "name",
+    "angle_of_view",
+    "elevation",
+    "lat",
+    "lon",
+    "is_trustable",
+    "real_api_id",
+]
 
 
-
-CAMERA_COLUMNS = ["id","organization_id","name","angle_of_view","elevation","lat","lon","is_trustable","real_api_id"]
 def update_local_cameras_csv(cam_ids, cameras, csv_path):
     """
     Ensure that all used distant cameras exist in the local cameras CSV.
@@ -219,10 +315,12 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
 
     # present distant ids in local csv
     present = set(
-        pd.to_numeric(df_local.get("real_api_id", pd.Series(dtype="Int64")), errors="coerce")
-          .dropna()
-          .astype("Int64")
-          .tolist()
+        pd.to_numeric(
+            df_local.get("real_api_id", pd.Series(dtype="Int64")), errors="coerce"
+        )
+        .dropna()
+        .astype("Int64")
+        .tolist()
     )
 
     needed = [int(cid) for cid in cam_ids if int(cid) not in present]
@@ -242,6 +340,7 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
 
     # helper to create a series with the right length and type
     n = len(df_needed)
+
     def series_or_default(df, key, default, dtype=None):
         if key in df.columns:
             s = df[key]
@@ -252,15 +351,21 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
         return s
 
     # build rows to add with explicit dtypes and no all NA ambiguity
-    df_add = pd.DataFrame({
-        "name": series_or_default(df_needed, "name", "", "string"),
-        "angle_of_view": series_or_default(df_needed, "angle_of_view", 54.2, "float64"),
-        "elevation": series_or_default(df_needed, "elevation", 0.0, "float64"),
-        "lat": series_or_default(df_needed, "lat", np.nan, "float64"),
-        "lon": series_or_default(df_needed, "lon", np.nan, "float64"),
-        "is_trustable": series_or_default(df_needed, "is_trustable", pd.NA, "boolean"),
-        "real_api_id": df_needed["id"].astype("Int64"),
-    })
+    df_add = pd.DataFrame(
+        {
+            "name": series_or_default(df_needed, "name", "", "string"),
+            "angle_of_view": series_or_default(
+                df_needed, "angle_of_view", 54.2, "float64"
+            ),
+            "elevation": series_or_default(df_needed, "elevation", 0.0, "float64"),
+            "lat": series_or_default(df_needed, "lat", np.nan, "float64"),
+            "lon": series_or_default(df_needed, "lon", np.nan, "float64"),
+            "is_trustable": series_or_default(
+                df_needed, "is_trustable", pd.NA, "boolean"
+            ),
+            "real_api_id": df_needed["id"].astype("Int64"),
+        }
+    )
 
     org_api_series = series_or_default(df_needed, "organization_id", 1, "Int64")
     df_add.insert(0, "organization_id", org_api_series)
@@ -271,7 +376,13 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
     else:
         current_max = pd.to_numeric(df_local["id"], errors="coerce").dropna()
         start_id = int(current_max.max() if not current_max.empty else 0) + 1
-    df_add.insert(0, "id", pd.Series(range(start_id, start_id + len(df_add)), index=df_add.index, dtype="Int64"))
+    df_add.insert(
+        0,
+        "id",
+        pd.Series(
+            range(start_id, start_id + len(df_add)), index=df_add.index, dtype="Int64"
+        ),
+    )
 
     # align columns and dtypes before concat
     df_local = df_local.reindex(columns=CAMERA_COLUMNS).astype(DTYPES, copy=False)
@@ -283,11 +394,14 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
     out = out.rename(columns={"organization_id": "organization_api_id"})
     unique_orgs = sorted(out["organization_api_id"].dropna().unique())
     org_mapping = {org_api: i + 2 for i, org_api in enumerate(unique_orgs)}
-    out.insert(1, "organization_id", out["organization_api_id"].map(org_mapping).astype("Int64"))
+    out.insert(
+        1,
+        "organization_id",
+        out["organization_api_id"].map(org_mapping).astype("Int64"),
+    )
 
     out.to_csv(csv_path, index=False)
     print(f"Added {len(df_add)} cameras to {csv_path}")
-
 
 
 def dl_seqs_in_target_dir(
@@ -333,12 +447,34 @@ def dl_seqs_in_target_dir(
             desc=descending_order,
         ).json()
 
+        if not sequences:
+            print(f"== No detections found for sequence {seq_id}")
+            continue
+
         cam_id_distant_api = sequences[0]["camera_id"]
         used_cam_ids.add(int(cam_id_distant_api))
 
-        cam_name = [item["name"] for item in cameras if item["id"] == cam_id_distant_api][0]
-        created_at_rounded = sequences[0]["created_at"].split(".")[0].replace(":", "-").replace("T", "_")
-        alert_dir = os.path.join(f"{cam_id_distant_api}_{cam_name}_{created_at_rounded}")
+        cam_name = [
+            item["name"] for item in cameras if item["id"] == cam_id_distant_api
+        ][0]
+
+        created_at_rounded = (
+            sequences[0]["created_at"].split(".")[0].replace(":", "-").replace("T", "_")
+        )
+
+        # read azimuth from the first detection
+        azimuth = sequences[0].get("azimuth", None)
+
+        # include azimuth in the folder name if present
+        if azimuth is not None:
+            alert_dir = os.path.join(
+                f"{cam_id_distant_api}_{cam_name}_{azimuth}_{created_at_rounded}"
+            )
+        else:
+            alert_dir = os.path.join(
+                f"{cam_id_distant_api}_{cam_name}_{created_at_rounded}"
+            )
+
         image_dir = os.path.join(target_dir, alert_dir, "images")
         pred_dir = os.path.join(target_dir, alert_dir, "labels_predictions")
 
@@ -346,7 +482,9 @@ def dl_seqs_in_target_dir(
             print(f"== Skip sequence {seq_id}, folder already exists at {alert_dir}")
             continue
 
-        print(f"== Download Alerts data for sequence ID {seq_id}, camera {cam_name}, at {created_at_rounded}")
+        print(
+            f"== Download Alerts data for sequence {seq_id}, camera {cam_name}, azimuth {azimuth}, at {created_at_rounded}"
+        )
         os.makedirs(image_dir, exist_ok=True)
         os.makedirs(pred_dir, exist_ok=True)
 
@@ -365,7 +503,7 @@ def dl_seqs_in_target_dir(
                     for chunk in response.iter_content(1024):
                         f.write(chunk)
             else:
-                print("Error during download.")
+                print(f"Error downloading {nom_fichier} for seq {seq_id}")
 
     # update the local cameras csv once
     update_local_cameras_csv(used_cam_ids, cameras, csv_path)

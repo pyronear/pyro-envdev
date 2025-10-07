@@ -187,37 +187,43 @@ def send_triangulated_alerts(
 
 
 CAMERA_COLUMNS = ["id","organization_id","name","angle_of_view","elevation","lat","lon","is_trustable","real_api_id"]
-
 def update_local_cameras_csv(cam_ids, cameras, csv_path):
     """
     Ensure that all used distant cameras exist in the local cameras CSV.
 
     New rows are appended when a distant camera id is not present. A new local id is assigned.
     Only the requested columns are written: id, organization_id, name, angle_of_view, elevation, lat, lon, is_trustable, real_api_id.
-
-    Args:
-        cam_ids: Iterable of distant camera ids used in the sequences.
-        cameras: List of camera dicts as returned by the distant API.
-        csv_path: Path to the local cameras CSV file.
-
-    Returns:
-        None
-
-    Side Effects:
-        Creates the CSV if missing, appends new rows when needed, preserves existing rows.
     """
-    # load or init local csv
+    DTYPES = {
+        "id": "Int64",
+        "organization_id": "Int64",
+        "name": "string",
+        "angle_of_view": "float64",
+        "elevation": "float64",
+        "lat": "float64",
+        "lon": "float64",
+        "is_trustable": "boolean",
+        "real_api_id": "Int64",
+    }
+
+    # load or init local csv, coerce to target schema
     if os.path.exists(csv_path):
         df_local = pd.read_csv(csv_path)
         for col in CAMERA_COLUMNS:
             if col not in df_local.columns:
                 df_local[col] = pd.NA
-        df_local = df_local[CAMERA_COLUMNS]
+        df_local = df_local[CAMERA_COLUMNS].convert_dtypes()
     else:
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-        df_local = pd.DataFrame(columns=CAMERA_COLUMNS)
+        df_local = pd.DataFrame(columns=CAMERA_COLUMNS).astype(DTYPES)
 
-    present = set(pd.to_numeric(df_local.get("real_api_id", pd.Series(dtype=float)), errors="coerce").dropna().astype(int))
+    # present distant ids in local csv
+    present = set(
+        pd.to_numeric(df_local.get("real_api_id", pd.Series(dtype="Int64")), errors="coerce")
+          .dropna()
+          .astype("Int64")
+          .tolist()
+    )
 
     needed = [int(cid) for cid in cam_ids if int(cid) not in present]
     if not needed:
@@ -225,42 +231,63 @@ def update_local_cameras_csv(cam_ids, cameras, csv_path):
         return
 
     df_api = pd.DataFrame(cameras)
+    if "id" not in df_api.columns:
+        print("API cameras list has no id column")
+        return
+
     df_needed = df_api[df_api["id"].isin(needed)].copy()
     if df_needed.empty:
         print("No matching cameras found in API for the requested ids")
         return
 
-    # build rows to add
+    # helper to create a series with the right length and type
+    n = len(df_needed)
+    def series_or_default(df, key, default, dtype=None):
+        if key in df.columns:
+            s = df[key]
+        else:
+            s = pd.Series([default] * n, index=df.index)
+        if dtype is not None:
+            s = s.astype(dtype)
+        return s
+
+    # build rows to add with explicit dtypes and no all NA ambiguity
     df_add = pd.DataFrame({
-        "organization_id": df_needed.get("organization_id", 1),
-        "name": df_needed.get("name", "").astype(str),
-        "angle_of_view": df_needed.get("angle_of_view", 54.2),
-        "elevation": df_needed.get("elevation", 0.0),
-        "lat": df_needed.get("lat"),
-        "lon": df_needed.get("lon"),
-        "is_trustable": df_needed.get("is_trustable"),
-        "real_api_id": df_needed["id"].astype(int)
+        "name": series_or_default(df_needed, "name", "", "string"),
+        "angle_of_view": series_or_default(df_needed, "angle_of_view", 54.2, "float64"),
+        "elevation": series_or_default(df_needed, "elevation", 0.0, "float64"),
+        "lat": series_or_default(df_needed, "lat", np.nan, "float64"),
+        "lon": series_or_default(df_needed, "lon", np.nan, "float64"),
+        "is_trustable": series_or_default(df_needed, "is_trustable", pd.NA, "boolean"),
+        "real_api_id": df_needed["id"].astype("Int64"),
     })
 
-    # assign new local ids
-    start_id = 1 if df_local.empty else int(pd.to_numeric(df_local["id"], errors="coerce").dropna().max() or 0) + 1
-    df_add.insert(0, "id", range(start_id, start_id + len(df_add)))
+    org_api_series = series_or_default(df_needed, "organization_id", 1, "Int64")
+    df_add.insert(0, "organization_id", org_api_series)
 
-    out = pd.concat([df_local, df_add[CAMERA_COLUMNS]], ignore_index=True)
+    # assign new local ids as nullable ints
+    if df_local.empty:
+        start_id = 1
+    else:
+        current_max = pd.to_numeric(df_local["id"], errors="coerce").dropna()
+        start_id = int(current_max.max() if not current_max.empty else 0) + 1
+    df_add.insert(0, "id", pd.Series(range(start_id, start_id + len(df_add)), index=df_add.index, dtype="Int64"))
 
-    # Rename organization_id to organization_api_id
+    # align columns and dtypes before concat
+    df_local = df_local.reindex(columns=CAMERA_COLUMNS).astype(DTYPES, copy=False)
+    df_add = df_add.reindex(columns=CAMERA_COLUMNS).astype(DTYPES, copy=False)
+
+    out = pd.concat([df_local, df_add], ignore_index=True)
+
+    # rename and map organizations
     out = out.rename(columns={"organization_id": "organization_api_id"})
-
-    # Build stable mapping from unique organization_api_id -> new organization_id
     unique_orgs = sorted(out["organization_api_id"].dropna().unique())
-    org_mapping = {org_api: i+2 for i, org_api in enumerate(unique_orgs)}
+    org_mapping = {org_api: i + 2 for i, org_api in enumerate(unique_orgs)}
+    out.insert(1, "organization_id", out["organization_api_id"].map(org_mapping).astype("Int64"))
 
-    # Apply mapping
-    out.insert(1, "organization_id", out["organization_api_id"].map(org_mapping))
-
-    # Save
     out.to_csv(csv_path, index=False)
     print(f"Added {len(df_add)} cameras to {csv_path}")
+
 
 
 def dl_seqs_in_target_dir(

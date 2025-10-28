@@ -2,7 +2,6 @@ services:
   pyro_api:
     container_name: api
     image: pyronear/alert-api:latest
-    restart: always
     command: "sh -c 'python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
     ports:
     - 5050:5050
@@ -69,7 +68,6 @@ services:
     command: python run.py
     volumes:
     - ./data:/usr/src/app/data
-    restart: always
     logging:
       driver: json-file
       options:
@@ -174,7 +172,6 @@ services:
     image: dpage/pgadmin4
     profiles:
       - tools
-    restart: always
     ports:
       - "8888:80"
     environment:

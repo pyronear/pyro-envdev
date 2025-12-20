@@ -1,4 +1,4 @@
 pandas
 python-dotenv
 pillow
-pyroclient @ git+https://github.com/pyronear/pyro-api.git@poses#subdirectory=client
+pyroclient @ git+https://github.com/pyronear/pyro-api.git@main#subdirectory=client

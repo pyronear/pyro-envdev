@@ -7,7 +7,7 @@ import itertools
 import time
 from PIL import Image
 import requests
-
+import ast
 from api import get_camera_token
 
 
@@ -144,6 +144,17 @@ def dl_seqs_from_url(url, output_path):
 def send_triangulated_alerts(
     cam_triangulation, API_URL, Client, admin_access_token, sleep_seconds=1
 ):
+    def get_or_create_pose_id_for_azimuth(camera_client, camera_id, azimuth, tol=0.1, patrol_id=None):
+        resp = camera_client.get_current_poses()
+        resp.raise_for_status()
+        for pose in resp.json():
+            if abs(pose["azimuth"] - azimuth) <= tol:
+                return pose["id"]
+
+        create_resp = camera_client.create_pose(camera_id=camera_id, azimuth=azimuth, patrol_id=patrol_id)
+        create_resp.raise_for_status()
+        return create_resp.json()["id"]
+
     for cam_id, info in cam_triangulation.items():
         camera_token = get_camera_token(API_URL, cam_id, admin_access_token)
         camera_client = Client(camera_token, API_URL)
@@ -156,7 +167,7 @@ def send_triangulated_alerts(
         preds = glob.glob(f"{seq_folder}/labels_predictions/*")
         preds.sort()
 
-        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")  # debug
+        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")
 
         info["seq_data_pair"] = list(zip(imgs, preds))
 
@@ -166,20 +177,22 @@ def send_triangulated_alerts(
     ):
         for (cam_id, info), pair in zip(cam_triangulation.items(), files):
             if pair is None:
-                continue  # len of sequences might be different
+                continue
             img_file, pred_file = pair
             client = info["client"]
             azimuth = info["azimuth"]
+
+            pose_id = get_or_create_pose_id_for_azimuth(client, cam_id, azimuth)
 
             stream = io.BytesIO()
             im = Image.open(img_file)
             im.save(stream, format="JPEG", quality=80)
 
-            with open(pred_file, "r") as file:
-                bboxes = file.read()
+            with open(pred_file, "r", encoding="utf-8") as file:
+                bboxes = ast.literal_eval(file.read())
 
-            response = client.create_detection(stream.getvalue(), azimuth, eval(bboxes))
+            response = client.create_detection(stream.getvalue(), bboxes, pose_id=pose_id)
             time.sleep(sleep_seconds)
 
-            response.json()["id"]  # Force a KeyError if the request failed
+            response.json()["id"]
             print(f"detection sent for cam {cam_id}")

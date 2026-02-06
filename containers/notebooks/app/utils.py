@@ -1,3 +1,4 @@
+import ast
 import os
 import io
 import glob
@@ -141,6 +142,22 @@ def dl_seqs_from_url(url, output_path):
     print("Extraction completed.")
 
 
+def get_or_create_pose_id_for_azimuth(
+    camera_client, camera_id, azimuth, tol=0.1, patrol_id=None
+):
+    resp = camera_client.get_current_poses()
+    resp.raise_for_status()
+    for pose in resp.json():
+        if abs(pose["azimuth"] - azimuth) <= tol:
+            return pose["id"]
+    print(f"did not found a matching pose_id, gonna create one, azimuth was {azimuth}")
+    create_resp = camera_client.create_pose(
+        camera_id=camera_id, azimuth=azimuth, patrol_id=patrol_id
+    )
+    create_resp.raise_for_status()
+    return create_resp.json()["id"]
+
+
 def send_triangulated_alerts(
     cam_triangulation, API_URL, Client, admin_access_token, sleep_seconds=1
 ):
@@ -170,15 +187,19 @@ def send_triangulated_alerts(
             img_file, pred_file = pair
             client = info["client"]
             azimuth = info["azimuth"]
-
+            # print(f"cam if {cam_id}")
+            pose_id = get_or_create_pose_id_for_azimuth(client, cam_id, azimuth)
+            # print(f"pose_id:{pose_id}")
             stream = io.BytesIO()
             im = Image.open(img_file)
             im.save(stream, format="JPEG", quality=80)
 
             with open(pred_file, "r") as file:
-                bboxes = file.read()
+                bboxes = ast.literal_eval(file.read())
 
-            response = client.create_detection(stream.getvalue(), azimuth, eval(bboxes))
+            response = client.create_detection(
+                stream.getvalue(), bboxes, pose_id=pose_id
+            )
             time.sleep(sleep_seconds)
 
             response.json()["id"]  # Force a KeyError if the request failed

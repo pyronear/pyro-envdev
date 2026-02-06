@@ -1,4 +1,4 @@
-###### TODO REFACTOR : use the init scripts which are in the test_update_pi directory
+#  TODO REFACTOR : use the init scripts which are in the test_update_pi directory
 
 #!/usr/bin/env python
 
@@ -72,6 +72,7 @@ users = pd.read_csv(f"data/csv/API_DATA{sub_path} - users.csv")
 organizations = pd.read_csv(f"data/csv/API_DATA{sub_path} - organizations.csv")
 cameras = pd.read_csv(f"data/csv/API_DATA{sub_path} - cameras.csv")
 cameras = cameras.fillna("")
+poses = pd.read_csv(f"data/csv/API_DATA{sub_path} - poses.csv")
 
 for orga in organizations.itertuples(index=False):
     logging.info(f"saving orga : {orga.name}")
@@ -130,6 +131,16 @@ for camera in cameras.itertuples(index=False):
 
 write_json_file(credentials_path, data)
 write_json_file(credentials_path_etl, data_wildfire)
+
+logging.info("creating poses")
+for pose in poses.itertuples(index=False):
+    payload = {
+        "camera_id": pose.camera_id,
+        "azimuth": pose.azimuth,
+        "patrol_id": pose.patrol_id,
+    }
+    api_request("post", f"{api_url}/poses/", superuser_auth, payload)
+
 
 # Load environment variables from .env file
 # load_dotenv()

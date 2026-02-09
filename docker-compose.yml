@@ -184,6 +184,27 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${DB_UI_PWD}
     depends_on:
       - db
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5.2
+    ports:
+      - "9310:9310"
+      - "8443:8443"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
+      KC_HTTP_PORT: 9310
+      KC_HTTPS_PORT: 8443
+      KC_DB: dev-file
+      KC_ENABLE_HTTPS: true
+      KC_LOG_LEVEL: info
+    volumes:
+      - "./containers/keycloak/:/opt/keycloak/data/import"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://keycloak:9310" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: start-dev --import-realm
 
 volumes:
   minio_data:

@@ -1,0 +1,6 @@
+# Dependencies for force06-demo scripts:
+# - send_heartbit.py
+# - send_alert.py
+# - send_last_image.py
+pillow
+pyroclient @ git+https://github.com/pyronear/pyro-api.git@main#subdirectory=client

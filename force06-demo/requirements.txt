@@ -3,4 +3,4 @@
 # - send_alert.py
 # - send_last_image.py
 pillow
-pyroclient @ git+https://github.com/pyronear/pyro-api.git@main#subdirectory=client
+pyroclient @ git+https://github.com/pyronear/pyro-api.git@9cba4afdf1d096436ca875bfde104f1a9bc1df24#subdirectory=client

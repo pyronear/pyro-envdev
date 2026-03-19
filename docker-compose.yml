@@ -56,18 +56,37 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-  pyro_engine:
-    container_name: engine
+  pyro_camera_api:
+    image: pyronear/pyro-camera-api:latest
+    profiles:
+      - engine
+    environment:
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
+      - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}
+    volumes:
+      - ./data:/usr/src/app/data
+    network_mode: host
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+        max-file: '5'
+    depends_on:
+      init_script:
+        condition: service_started
+  engine:
     image: pyronear/pyro-engine:latest
     profiles:
       - engine
     environment:
-    - API_URL=${API_URL}
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
+      - API_URL=http://localhost:5050
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
     command: python run.py
     volumes:
-    - ./data:/usr/src/app/data
+      - ./data:/usr/src/app/data
+    network_mode: host
     logging:
       driver: json-file
       options:
@@ -78,6 +97,9 @@ services:
         condition: service_started
       pyro_api:
         condition: service_healthy
+      pyro_camera_api:
+        condition: service_started
+
   etl_scripts:
     container_name: etl
     image: pyronear/pyro-etl:latest

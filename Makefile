@@ -3,19 +3,21 @@
 
 help:
 	@echo "Targets:"
-	@echo "  init            Create .env from .env.test if missing"
-	@echo "  build           Build local images in this repo"
-	@echo "  build-external  Build images in sibling repos"
-	@echo "  build-all       Build local and external images"
-	@echo "  run-backend     Start base services only"
-	@echo "  run-engine      Start base services plus engine profile"
-	@echo "  run-tools       Start base services plus tools profile"
-	@echo "  run             Start base services plus front and tools profiles"
-	@echo "  run-all         Start base services plus front tools and engine profiles"
-	@echo "  stop            Stop and remove all services and volumes"
-	@echo "  ps              Show compose status"
-	@echo "  logs            Follow logs"
-	@echo "  test            Run pytest"
+	@echo "  init                Create .env from .env.test if missing"
+	@echo "  build               Build local images in this repo"
+	@echo "  build-external      Build images in sibling repos"
+	@echo "  build-all           Build local and external images"
+	@echo "  run-backend         Start base services only"
+	@echo "  run-engine          Start base services plus engine profile"
+	@echo "  run-tools-and-engine  Start base services plus tools and engine profiles"
+	@echo "  run-tools           Start base services plus tools profile"
+	@echo "  run                 Start base services plus front and tools profiles"
+	@echo "  stop-engine         Stop only engine services (engine + pyro_camera_api)"
+	@echo "  restart-engine      Restart engine services without re-running init_script"
+	@echo "  stop                Stop and remove all services and volumes"
+	@echo "  ps                  Show compose status"
+	@echo "  logs                Follow logs"
+	@echo "  test                Run pytest"
 
 # -------------------------------------------------------------------
 # Init
@@ -30,8 +32,6 @@ init:
 
 build:
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
-	docker build -f containers/reolinkdev1/Dockerfile -t pyronear/reolinkdev1:latest containers/reolinkdev1/
-	docker build -f containers/reolinkdev2/Dockerfile -t pyronear/reolinkdev2:latest containers/reolinkdev2/
 	docker build -f containers/notebooks/Dockerfile -t pyronear/notebooks:latest containers/notebooks/
 
 # -------------------------------------------------------------------
@@ -42,7 +42,6 @@ build-external:
 	cd ../pyro-api && make build
 	cd ../pyro-engine && make build-lib
 	cd ../pyro-engine && make build-app
-	cd ../pyro-platform && make build
 
 build-all: build build-external
 
@@ -54,9 +53,13 @@ build-all: build build-external
 run-backend:
 	docker compose up -d
 
-# Engine profile adds pyro_engine, reolinkdev1, reolinkdev2
+# Engine profile adds engine + pyro_camera_api
 run-engine:
 	docker compose --profile engine up -d
+
+# Tools + engine
+run-tools-and-engine:
+	docker compose --profile tools --profile engine up -d
 
 # Tools profile adds notebooks, db-ui
 run-tools:
@@ -66,9 +69,11 @@ run-tools:
 run:
 	docker compose --profile front --profile tools up -d
 
-# Everything including engine
-run-all:
-	docker compose --profile front --profile tools --profile engine up -d
+stop-engine:
+	docker compose --profile engine stop engine pyro_camera_api
+
+restart-engine: stop-engine
+	docker compose --profile engine up -d engine pyro_camera_api --no-deps
 
 stop:
 	docker compose --profile front --profile engine --profile tools down -v

@@ -49,7 +49,7 @@ services:
       - MINIO_ROOT_USER=${S3_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
     volumes:
-      - ./data/minio:/data
+      - minio_data:/data
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
@@ -179,3 +179,6 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${DB_UI_PWD}
     depends_on:
       - db
+
+volumes:
+  minio_data:

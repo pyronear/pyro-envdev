@@ -78,10 +78,6 @@ services:
         condition: service_started
       pyro_api:
         condition: service_healthy
-      reolinkdev1:
-        condition: service_healthy
-      reolinkdev2:
-        condition: service_healthy
   etl_scripts:
     container_name: etl
     image: pyronear/pyro-etl:latest
@@ -113,34 +109,6 @@ services:
     depends_on:
       pyro_api:
         condition: service_healthy
-  reolinkdev1:
-    image: pyronear/reolinkdev1:latest
-    profiles:
-      - engine
-    environment:
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
-    volumes:
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolinkdev1/health'"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-  reolinkdev2:
-    image: pyronear/reolinkdev2:latest
-    profiles:
-      - engine
-    environment:
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
-    volumes:
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolinkdev2/health'"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
   frontend:
     image: pyronear/pyro-platform:latest
     command: python index.py --host 0.0.0.0 --port 8050

@@ -72,9 +72,6 @@ services:
       options:
         max-size: 100m
         max-file: '5'
-    depends_on:
-      init_script:
-        condition: service_started
   engine:
     image: pyronear/pyro-engine:latest
     profiles:
@@ -92,13 +89,6 @@ services:
       options:
         max-size: 100m
         max-file: '5'
-    depends_on:
-      init_script:
-        condition: service_started
-      pyro_api:
-        condition: service_healthy
-      pyro_camera_api:
-        condition: service_started
 
   etl_scripts:
     container_name: etl

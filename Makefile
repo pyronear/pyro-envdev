@@ -57,9 +57,10 @@ run-backend:
 run-engine:
 	docker compose --profile engine up -d
 
-# Tools + engine
+# Tools + engine (tools must be up first so the API is ready when engine starts)
 run-tools-and-engine:
-	docker compose --profile tools --profile engine up -d
+	$(MAKE) run-tools
+	$(MAKE) run-engine
 
 # Tools profile adds notebooks, db-ui
 run-tools:

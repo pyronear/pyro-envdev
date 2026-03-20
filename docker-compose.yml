@@ -49,39 +49,47 @@ services:
       - MINIO_ROOT_USER=${S3_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
     volumes:
-      - ./data/minio:/data
+      - minio_data:/data
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
       timeout: 10s
       retries: 5
-  pyro_engine:
-    container_name: engine
-    image: pyronear/pyro-engine:latest
+  pyro_camera_api:
+    image: pyronear/pyro-camera-api:latest
     profiles:
       - engine
     environment:
-    - API_URL=${API_URL}
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
-    command: python run.py
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
+      - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}
     volumes:
-    - ./data:/usr/src/app/data
+      - ./data:/usr/src/app/data
+    network_mode: host
     logging:
       driver: json-file
       options:
         max-size: 100m
         max-file: '5'
-    depends_on:
-      init_script:
-        condition: service_started
-      pyro_api:
-        condition: service_healthy
-      reolinkdev1:
-        condition: service_healthy
-      reolinkdev2:
-        condition: service_healthy
+  engine:
+    image: pyronear/pyro-engine:latest
+    profiles:
+      - engine
+    environment:
+      - API_URL=http://localhost:5050
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
+    command: python run.py
+    volumes:
+      - ./data:/usr/src/app/data
+    network_mode: host
+    logging:
+      driver: json-file
+      options:
+        max-size: 100m
+        max-file: '5'
+
   etl_scripts:
     container_name: etl
     image: pyronear/pyro-etl:latest
@@ -113,34 +121,6 @@ services:
     depends_on:
       pyro_api:
         condition: service_healthy
-  reolinkdev1:
-    image: pyronear/reolinkdev1:latest
-    profiles:
-      - engine
-    environment:
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
-    volumes:
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolinkdev1/health'"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-  reolinkdev2:
-    image: pyronear/reolinkdev2:latest
-    profiles:
-      - engine
-    environment:
-    - CAM_USER=${CAM_USER}
-    - CAM_PWD=${CAM_PWD}
-    volumes:
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -X 'GET' -k 'https://reolinkdev2/health'"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
   frontend:
     image: pyronear/pyro-platform:latest
     command: python index.py --host 0.0.0.0 --port 8050
@@ -179,3 +159,6 @@ services:
       - PGADMIN_DEFAULT_PASSWORD=${DB_UI_PWD}
     depends_on:
       - db
+
+volumes:
+  minio_data:

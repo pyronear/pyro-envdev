@@ -1,0 +1,6 @@
+pandas
+python-dotenv==1.0.1
+boto3==1.34.90
+requests
+pillow
+pyroclient @ git+https://github.com/pyronear/pyro-api.git@main#subdirectory=client

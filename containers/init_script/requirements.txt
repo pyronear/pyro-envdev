@@ -1,5 +1,5 @@
 pandas
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 boto3==1.34.90
 requests
 pillow

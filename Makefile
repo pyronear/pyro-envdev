@@ -12,6 +12,8 @@ help:
 	@echo "  run-tools-and-engine  Start base services plus tools and engine profiles"
 	@echo "  run-tools           Start base services plus tools profile"
 	@echo "  run                 Start base services plus front and tools profiles"
+	@echo "  run-temporal        Same as run (front + tools) plus temporal model API"
+	@echo "  stop-temporal       Stop only the temporal model API"
 	@echo "  stop-engine         Stop only engine services (engine + pyro_camera_api)"
 	@echo "  restart-engine      Restart engine services without re-running init_script"
 	@echo "  stop                Stop and remove all services and volumes"
@@ -70,6 +72,17 @@ run-tools:
 run:
 	docker compose --profile front --profile tools up -d
 
+# Same as `run` (front + tools) plus the temporal model API, with validation + auth enabled.
+# Points pyro-api at the temporal service and shares a token with both.
+# Override either: TEMPORAL_API_URL=... TEMPORAL_API_TOKEN=... make run-temporal
+TEMPORAL_API_URL ?= http://temporal_model_api:8000
+TEMPORAL_API_TOKEN ?= dev-temporal-token
+run-temporal:
+	TEMPORAL_API_URL=$(TEMPORAL_API_URL) TEMPORAL_API_TOKEN=$(TEMPORAL_API_TOKEN) docker compose --profile front --profile tools --profile temporal up -d
+
+stop-temporal:
+	docker compose --profile temporal stop temporal_model_api
+
 stop-engine:
 	docker compose --profile engine stop engine pyro_camera_api
 
@@ -77,7 +90,7 @@ restart-engine: stop-engine
 	docker compose --profile engine up -d engine pyro_camera_api --no-deps
 
 stop:
-	docker compose --profile front --profile engine --profile tools down -v
+	docker compose --profile front --profile engine --profile tools --profile temporal down -v
 
 ps:
 	docker compose ps

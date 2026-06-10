@@ -12,7 +12,7 @@ help:
 	@echo "  run-tools-and-engine  Start base services plus tools and engine profiles"
 	@echo "  run-tools           Start base services plus tools profile"
 	@echo "  run                 Start base services plus front and tools profiles"
-	@echo "  run-temporal        Start base services plus temporal model API"
+	@echo "  run-temporal        Same as run (front + tools) plus temporal model API"
 	@echo "  stop-temporal       Stop only the temporal model API"
 	@echo "  stop-engine         Stop only engine services (engine + pyro_camera_api)"
 	@echo "  restart-engine      Restart engine services without re-running init_script"
@@ -72,9 +72,9 @@ run-tools:
 run:
 	docker compose --profile front --profile tools up -d
 
-# Temporal profile adds the temporal model API (reads alert images from MinIO)
+# Same as `run` (front + tools) plus the temporal model API
 run-temporal:
-	docker compose --profile temporal up -d
+	docker compose --profile front --profile tools --profile temporal up -d
 
 stop-temporal:
 	docker compose --profile temporal stop temporal_model_api

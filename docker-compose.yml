@@ -16,9 +16,11 @@ services:
     - S3_ACCESS_KEY=${S3_ACCESS_KEY}
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
+    - SERVER_NAME=${SERVER_NAME}
     - PLATFORM_URL=${PLATFORM_URL:-http://0.0.0.0:8050}
     - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}
     - TEMPORAL_MODEL_THRESHOLD=${TEMPORAL_MODEL_THRESHOLD:-0.45}
+    - TEMPORAL_API_TOKEN=${TEMPORAL_API_TOKEN:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
       interval: 20s
@@ -106,6 +108,8 @@ services:
       - TEMPORAL_API_S3_REGION=${S3_REGION}
       - AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
+      # Empty = auth disabled; set the same value as pyro-api to require a token.
+      - TEMPORAL_API_TOKEN=${TEMPORAL_API_TOKEN:-}
     depends_on:
       minio:
         condition: service_healthy

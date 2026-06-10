@@ -72,11 +72,13 @@ run-tools:
 run:
 	docker compose --profile front --profile tools up -d
 
-# Same as `run` (front + tools) plus the temporal model API, with auth enabled.
-# A shared token is passed to both services (override: TEMPORAL_API_TOKEN=... make run-temporal).
+# Same as `run` (front + tools) plus the temporal model API, with validation + auth enabled.
+# Points pyro-api at the temporal service and shares a token with both.
+# Override either: TEMPORAL_API_URL=... TEMPORAL_API_TOKEN=... make run-temporal
+TEMPORAL_API_URL ?= http://temporal_model_api:8000
 TEMPORAL_API_TOKEN ?= dev-temporal-token
 run-temporal:
-	TEMPORAL_API_TOKEN=$(TEMPORAL_API_TOKEN) docker compose --profile front --profile tools --profile temporal up -d
+	TEMPORAL_API_URL=$(TEMPORAL_API_URL) TEMPORAL_API_TOKEN=$(TEMPORAL_API_TOKEN) docker compose --profile front --profile tools --profile temporal up -d
 
 stop-temporal:
 	docker compose --profile temporal stop temporal_model_api

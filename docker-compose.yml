@@ -17,6 +17,8 @@ services:
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
     - PLATFORM_URL=${PLATFORM_URL:-http://0.0.0.0:8050}
+    - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}
+    - TEMPORAL_MODEL_THRESHOLD=${TEMPORAL_MODEL_THRESHOLD:-0.45}
     healthcheck:
       test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
       interval: 20s
@@ -99,7 +101,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      - TEMPORAL_API_S3_BUCKET=frames
+      # Bucket is supplied per request by pyro-api (per-org alert buckets).
       - TEMPORAL_API_S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
       - TEMPORAL_API_S3_REGION=${S3_REGION}
       - AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}

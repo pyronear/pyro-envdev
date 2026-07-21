@@ -9,8 +9,7 @@ This repository provides a Docker Compose configuration to run a full Pyronear d
 ### Prerequisites
 
 * Docker and Docker Compose
-* Add this line to `/etc/hosts` so the MinIO endpoint resolves correctly:
-
+*  Add this line to your hosts file (`/etc/hosts` on Linux/macOS, `C:\Windows\System32\drivers\etc\hosts` on Windows):
   ```
   127.0.0.1 minio
   ```

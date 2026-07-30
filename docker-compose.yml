@@ -17,7 +17,7 @@ services:
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
     - SERVER_NAME=${SERVER_NAME}
-    - PLATFORM_URL=${PLATFORM_URL:-http://0.0.0.0:8050}
+    - PLATFORM_URL=${PLATFORM_URL:-http://localhost:8080}
     - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}
     - TEMPORAL_MODEL_THRESHOLD=${TEMPORAL_MODEL_THRESHOLD:-0.45}
     - TEMPORAL_API_TOKEN=${TEMPORAL_API_TOKEN:-}
@@ -146,17 +146,16 @@ services:
       pyro_api:
         condition: service_healthy
   frontend:
-    image: pyronear/pyro-platform:latest
-    command: python index.py --host 0.0.0.0 --port 8050
+    image: pyronear/pyro-platform-react:latest
     profiles:
       - front
     ports:
-      - 8050:8050
-    environment:
-      - API_URL=${API_URL}
-      - API_LOGIN=${SUPERADMIN_LOGIN}
-      - API_PWD=${SUPERADMIN_PWD}
-      - DEBUG=FALSE
+      - 8080:8080
+    volumes:
+      # The React app runs in the browser, so API_URL in app-config.js must be
+      # reachable from the host (localhost:5050), not the compose network.
+      - ./containers/frontend/app-config.js:/usr/share/nginx/html/config/app-config.js:ro
+      - ./containers/frontend/sites_live_access.json:/usr/share/nginx/html/config/sites_live_access.json:ro
     depends_on:
       init_script:
         condition: service_started

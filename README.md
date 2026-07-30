@@ -32,7 +32,7 @@ make run
 ```
 
 * Send an alert by opening [http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb](http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb)
-* Observe the alert on the frontend at [http://0.0.0.0:8050/](http://0.0.0.0:8050/)
+* Observe the alert on the frontend at [http://localhost:8080/](http://localhost:8080/)
 * Use credentials from `data/csv/API_DATA_DEV/users.csv`
 * Or check directly on the API at [http://0.0.0.0:5050/docs](http://0.0.0.0:5050/docs) with the same creds
 
@@ -43,7 +43,7 @@ make run
 * **pyro-api**: Pyronear API (uvicorn)
 * **db**: PostgreSQL database
 * **minio**: S3-compatible storage (via MinIO)
-* **frontend**: Web app (Dash)
+* **frontend**: Web app (React, [pyro-platform](https://github.com/pyronear/pyro-platform))
 * **pyro-engine**: Engine service (requires cameras, optional)
 * **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
 * **notebooks**: Jupyter server to run helper notebooks
@@ -91,10 +91,11 @@ docker logs engine
 ## 🔑 Access
 
 * **API**: [http://localhost:5050/docs](http://localhost:5050/docs)
-* **Frontend (Dash app)**: [http://localhost:8050](http://localhost:8050)
+* **Frontend (React app)**: [http://localhost:8080](http://localhost:8080)
 
   * If issues: use a private browser window
   * Admin access currently does not display camera alerts, use user creds from `data/csv/users.csv`
+  * Configuration (API URL, etc.) lives in `containers/frontend/app-config.js`
 * **Notebooks**: [http://localhost:8889](http://localhost:8889)
 * **pgAdmin (db-ui)**: [http://localhost:8888/browser/](http://localhost:8888/browser/)
 

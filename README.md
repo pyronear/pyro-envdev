@@ -9,10 +9,9 @@ This repository provides a Docker Compose configuration to run a full Pyronear d
 ### Prerequisites
 
 * Docker and Docker Compose
-*  Add this line to your hosts file (`/etc/hosts` on Linux/macOS, `C:\Windows\System32\drivers\etc\hosts` on Windows):
-  ```
-  127.0.0.1 minio
-  ```
+
+> **Upgrading?** The `127.0.0.1 minio` hosts entry is no longer needed (`S3_PROXY_URL`
+> replaces it) — harmless if left in place, but you can remove it.
 
 ---
 
@@ -104,6 +103,9 @@ docker logs engine
 * **MinIO console (S3 GUI)**: [http://localhost:9001](http://localhost:9001)
 
   * Manage buckets, upload/delete files
+* **MinIO S3 API**: `minio:9000` from the compose network (`S3_ENDPOINT_URL`),
+  [http://localhost:9000](http://localhost:9000) from the host (`S3_PROXY_URL`, used
+  for presigned image URLs)
 
 ---
 

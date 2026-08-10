@@ -6,8 +6,8 @@ import pytest
 # Load environment variables from .env file
 load_dotenv()
 
-# Get S3 endpoint URL and credentials from environment variables
-s3_endpoint_url = os.getenv("S3_ENDPOINT_URL") + "/"
+# Tests run on the host: prefer the public endpoint, `minio` is compose-only.
+s3_endpoint_url = (os.getenv("S3_PROXY_URL") or os.getenv("S3_ENDPOINT_URL")) + "/"
 s3_access_key = os.getenv("S3_ACCESS_KEY")
 s3_secret_key = os.getenv("S3_SECRET_KEY")
 s3_region = os.getenv("S3_REGION")
@@ -28,10 +28,13 @@ def s3_client():
 
 def test_s3_bucket(s3_client):
     response = s3_client.list_buckets()
-    assert response["Buckets"][0]["Name"] == "admin"
-    assert response["Buckets"][1]["Name"].endswith("-alert-api-1")
+    bucket_names = [bucket["Name"] for bucket in response["Buckets"]]
 
-    bucket_contents = s3_client.list_objects_v2(Bucket=response["Buckets"][1]["Name"])
+    # pyro-api creates one bucket per organization, named {SERVER_NAME}-alert-api-{org_id}
+    alert_buckets = [name for name in bucket_names if name.endswith("-alert-api-1")]
+    assert alert_buckets, bucket_names
+
+    bucket_contents = s3_client.list_objects_v2(Bucket=alert_buckets[0])
     print(bucket_contents)
     [item["Key"] for item in bucket_contents.get("Contents", [])]
     # assert keys != []

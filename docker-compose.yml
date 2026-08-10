@@ -16,6 +16,8 @@ services:
     - S3_ACCESS_KEY=${S3_ACCESS_KEY}
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
+    # Host used in presigned URLs, which the browser opens (`minio` is compose-only).
+    - S3_PROXY_URL=${S3_PROXY_URL:-}
     - SERVER_NAME=${SERVER_NAME}
     - PLATFORM_URL=${PLATFORM_URL:-http://localhost:8080}
     - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}

@@ -30,7 +30,7 @@ def test_s3_bucket(s3_client):
     response = s3_client.list_buckets()
     bucket_names = [bucket["Name"] for bucket in response["Buckets"]]
 
-    # pyro-api creates one bucket per organization, named {SERVER_NAME}-alert-api-{org_id}
+    # One bucket per organization: {SERVER_NAME}-alert-api-{org_id}
     alert_buckets = [name for name in bucket_names if name.endswith("-alert-api-1")]
     assert alert_buckets, bucket_names
 

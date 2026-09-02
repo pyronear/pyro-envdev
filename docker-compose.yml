@@ -185,7 +185,7 @@ services:
     depends_on:
       - db
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5.2
+    image: quay.io/keycloak/keycloak:26.7.3
     ports:
       - "9310:9310"
       - "8443:8443"
@@ -198,13 +198,14 @@ services:
       KC_ENABLE_HTTPS: true
       KC_LOG_LEVEL: info
     volumes:
-      - "./containers/keycloak/:/opt/keycloak/data/import"
+      - "./containers/keycloak/realm:/opt/keycloak/data/import"
+      - "./containers/keycloak/themes:/opt/keycloak/themes"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://keycloak:9310" ]
       interval: 10s
       timeout: 5s
       retries: 3
-    command: start-dev --import-realm
+    command: start-dev --import-realm --spi-theme--static-max-age=-1 --spi-theme--cache-themes=false --spi-theme--cache-templates=false
 
 volumes:
   minio_data:

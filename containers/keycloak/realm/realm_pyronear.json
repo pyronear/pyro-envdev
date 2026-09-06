@@ -432,11 +432,8 @@
       "subGroups": [],
       "attributes": {},
       "realmRoles": [
-        "F003_LIVE-STREAMING",
-        "F001_DISPLAY-ALERTS",
-        "F005_MANAGE-CAMERAS",
-        "F004_OCCLUSION-MASK",
-        "F002_DISPLAY-CAMERAS"
+        "F001_LIVESTREAMING",
+        "F002_OCCLUSION_MASK"
       ],
       "clientRoles": {}
     },
@@ -448,21 +445,9 @@
       "subGroups": [],
       "attributes": {},
       "realmRoles": [
-        "F001_DISPLAY-ALERTS",
-        "F002_DISPLAY-CAMERAS",
-        "F003_LIVE-STREAMING",
-        "F004_OCCLUSION-MASK"
+        "F001_LIVESTREAMING",
+        "F002_OCCLUSION_MASK"
       ],
-      "clientRoles": {}
-    },
-    {
-      "id": "6bfc1e44-2dbd-482d-8700-ea6f5da1eecf",
-      "name": "camera",
-      "description": "",
-      "path": "/camera",
-      "subGroups": [],
-      "attributes": {},
-      "realmRoles": [],
       "clientRoles": {}
     },
     {
@@ -472,10 +457,7 @@
       "path": "/user",
       "subGroups": [],
       "attributes": {},
-      "realmRoles": [
-        "F001_DISPLAY-ALERTS",
-        "F002_DISPLAY-CAMERAS"
-      ],
+      "realmRoles": [      ],
       "clientRoles": {}
     }
   ],
@@ -531,6 +513,7 @@
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
   "webAuthnPolicyPasswordlessAcceptableAaguids": [],
   "webAuthnPolicyPasswordlessExtraOrigins": [],
+  "loginTheme": "pyro-theme",
   "users": [
     {
       "id": "e813b152-bb4d-4b1d-8f9b-ea62554a6abe",

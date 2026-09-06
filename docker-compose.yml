@@ -188,24 +188,23 @@ services:
     image: quay.io/keycloak/keycloak:26.7.3
     ports:
       - "9310:9310"
-      - "8443:8443"
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
       KC_HTTP_PORT: 9310
       KC_HTTPS_PORT: 8443
       KC_DB: dev-file
-      KC_ENABLE_HTTPS: true
+      KC_ENABLE_HTTPS: false
       KC_LOG_LEVEL: info
     volumes:
       - "./containers/keycloak/realm:/opt/keycloak/data/import"
       - "./containers/keycloak/themes:/opt/keycloak/themes"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://keycloak:9310" ]
-      interval: 10s
+      test: ["CMD-SHELL", "grep -q 'started' /opt/keycloak/data/log/server.log || exit 1"]
+      interval: 20s
       timeout: 5s
-      retries: 3
-    command: start-dev --import-realm --spi-theme--static-max-age=-1 --spi-theme--cache-themes=false --spi-theme--cache-templates=false
+      retries: 6
+    command: start-dev --import-realm --log="console,file"
 
 volumes:
   minio_data:

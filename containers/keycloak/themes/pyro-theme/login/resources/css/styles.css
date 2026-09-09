@@ -1,0 +1,32 @@
+
+
+.login-pf body {
+    background: #eef1f0;
+}
+.login-pf-page .card-pf {
+    border-radius: 8px;
+    border: none;
+}
+
+.pf-c-button.pf-m-primary {
+    background-color: #054546;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+.pf-c-button.pf-m-primary:hover {
+    background-color: #033031FF;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 4px -1px, rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, rgba(0, 0, 0, 0.12) 0px 1px 10px 0px;
+}
+
+.pf-c-form__label-text {
+    font-size: 1rem;
+}
+#kc-header-wrapper {
+    text-indent: -9999px;
+    background-color: #054546;
+    background-image: url("../img/logo.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+}

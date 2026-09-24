@@ -31,7 +31,7 @@ make build
 make run
 ```
 
-* Send an alert by opening [http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb](http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb)
+* Replay a real alert with `make replay-alerts ALERTS=<id>` (see [Replay real alerts](#replay-real-alerts))
 * Observe the alert on the frontend at [http://localhost:8080/](http://localhost:8080/)
 * Use credentials from `data/csv/API_DATA_DEV/users.csv`
 * Or check directly on the API at [http://0.0.0.0:5050/docs](http://0.0.0.0:5050/docs) with the same creds
@@ -117,13 +117,32 @@ docker logs engine
 
 Create a directory `data/images` before starting the environment and put your images inside.
 
-### Send custom alerts
+### Replay real alerts
 
-Use Jupyter notebooks (e.g., `notebooks/send_real_alerts.ipynb`).
-When running notebooks **inside Docker**, set:
+`scripts/replay_alerts.py` replays real production alerts (all their sequences and
+images) on the local stack. Alerts are stored as `alert_<id>.zip` in the
+[`replay-alerts`](https://github.com/pyronear/pyro-envdev/releases/tag/replay-alerts)
+GitHub release. Needs `requests` and `python-dotenv` on the host.
 
-```python
-API_URL = "http://api:5050"
+```bash
+make list-alerts                                  # alerts available in the release
+make replay-alerts ALERTS="53800 53941"           # demo mode (default)
+make replay-alerts ALERTS=53800 MODE=live         # live mode
+```
+
+* **demo**: posts everything at once, dated today at the original time of day.
+  Add `--date original` (script only) to keep the original dates.
+* **live**: sends one frame per camera every 30 s (`--interval`), dated now.
+* Missing cameras are created by name in organization 2 (`--org-id`), so the
+  alerts show up for the `test77` user.
+
+Add new alerts (needs prod admin creds `DISTANT_*` in `.env`, and `gh` for publishing):
+
+```bash
+make fetch-alerts ALERTS="54095"      # writes data/replay_alerts/alert_54095.zip
+make publish-alerts ALERTS="54095"    # uploads it to the release
+```
+
 
 ### Update the last image for a camera
 

@@ -1,15 +1,7 @@
-import ast
 import os
-import io
-import glob
 import numpy as np
 import shutil
-import itertools
-import time
-from PIL import Image
 import requests
-
-from api import get_camera_token
 
 
 def xywh2xyxy(x: np.ndarray):
@@ -140,67 +132,3 @@ def dl_seqs_from_url(url, output_path):
     shutil.unpack_archive(zip_path, output_path, "zip")
     os.remove(zip_path)
     print("Extraction completed.")
-
-
-def get_or_create_pose_id_for_azimuth(
-    camera_client, camera_id, azimuth, tol=0.1, patrol_id=None
-):
-    resp = camera_client.get_current_poses()
-    resp.raise_for_status()
-    for pose in resp.json():
-        if abs(pose["azimuth"] - azimuth) <= tol:
-            return pose["id"]
-    print(f"did not found a matching pose_id, gonna create one, azimuth was {azimuth}")
-    create_resp = camera_client.create_pose(
-        camera_id=camera_id, azimuth=azimuth, patrol_id=patrol_id
-    )
-    create_resp.raise_for_status()
-    return create_resp.json()["id"]
-
-
-def send_triangulated_alerts(
-    cam_triangulation, API_URL, Client, admin_access_token, sleep_seconds=1
-):
-    for cam_id, info in cam_triangulation.items():
-        camera_token = get_camera_token(API_URL, cam_id, admin_access_token)
-        camera_client = Client(camera_token, API_URL)
-        info["client"] = camera_client
-
-        seq_folder = info["path"]
-
-        imgs = glob.glob(f"{seq_folder}/images/*")
-        imgs.sort()
-        preds = glob.glob(f"{seq_folder}/labels_predictions/*")
-        preds.sort()
-
-        print(f"Cam {cam_id}: {len(imgs)} images, {len(preds)} preds")  # debug
-
-        info["seq_data_pair"] = list(zip(imgs, preds))
-
-    print("Send some entrelaced detections")
-    for files in itertools.zip_longest(
-        *(info["seq_data_pair"] for info in cam_triangulation.values())
-    ):
-        for (cam_id, info), pair in zip(cam_triangulation.items(), files):
-            if pair is None:
-                continue  # len of sequences might be different
-            img_file, pred_file = pair
-            client = info["client"]
-            azimuth = info["azimuth"]
-            # print(f"cam if {cam_id}")
-            pose_id = get_or_create_pose_id_for_azimuth(client, cam_id, azimuth)
-            # print(f"pose_id:{pose_id}")
-            stream = io.BytesIO()
-            im = Image.open(img_file)
-            im.save(stream, format="JPEG", quality=80)
-
-            with open(pred_file, "r") as file:
-                bboxes = ast.literal_eval(file.read())
-
-            response = client.create_detection(
-                stream.getvalue(), bboxes, pose_id=pose_id
-            )
-            time.sleep(sleep_seconds)
-
-            response.json()["id"]  # Force a KeyError if the request failed
-            print(f"detection sent for cam {cam_id}")

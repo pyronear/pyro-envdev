@@ -20,6 +20,10 @@ help:
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
 	@echo "  test                Run pytest"
+	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=\"54095 53800\""
+	@echo "  publish-alerts      Upload fetched alerts to the replay-alerts GitHub release"
+	@echo "  list-alerts         List the alerts available in the release"
+	@echo "  replay-alerts       Replay alerts locally: make replay-alerts ALERTS=53800 MODE=live"
 
 # -------------------------------------------------------------------
 # Init
@@ -104,3 +108,21 @@ logs:
 
 test:
 	pytest -s tests/*
+
+# -------------------------------------------------------------------
+# Real alert replays (see scripts/replay_alerts.py)
+# -------------------------------------------------------------------
+
+MODE ?= demo
+
+fetch-alerts:
+	python3 scripts/replay_alerts.py fetch $(ALERTS)
+
+publish-alerts:
+	python3 scripts/replay_alerts.py publish $(ALERTS)
+
+list-alerts:
+	python3 scripts/replay_alerts.py list
+
+replay-alerts:
+	python3 scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE)

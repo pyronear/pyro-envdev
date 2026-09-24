@@ -18,6 +18,8 @@ services:
     - S3_REGION=${S3_REGION}
     # Host used in presigned URLs, which the browser opens (`rustfs` is compose-only).
     - S3_PROXY_URL=${S3_PROXY_URL:-}
+    # Origins allowed to fetch() presigned URLs (bucket CORS policy, set at bucket creation).
+    - S3_CORS_ORIGINS=${S3_CORS_ORIGINS:-http://localhost:8080}
     - SERVER_NAME=${SERVER_NAME}
     - PLATFORM_URL=${PLATFORM_URL:-http://localhost:8080}
     - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}

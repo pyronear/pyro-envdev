@@ -51,7 +51,7 @@ build-all: build build-external
 # Run targets
 # -------------------------------------------------------------------
 
-# Base services: db, minio, pyro_api, init_script
+# Base services: db, rustfs, pyro_api, init_script
 run-backend:
 	docker compose up -d
 

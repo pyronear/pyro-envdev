@@ -10,8 +10,9 @@ This repository provides a Docker Compose configuration to run a full Pyronear d
 
 * Docker and Docker Compose
 
-> **Upgrading?** The `127.0.0.1 minio` hosts entry is no longer needed (`S3_PROXY_URL`
-> replaces it) — harmless if left in place, but you can remove it.
+> **Upgrading?** MinIO was replaced by [RustFS](https://github.com/rustfs/rustfs): set
+> `S3_ENDPOINT_URL=http://rustfs:9000` in your `.env` (or re-run `cp .env.test .env`).
+> The `127.0.0.1 minio` hosts entry is no longer needed either.
 
 ---
 
@@ -41,7 +42,7 @@ make run
 
 * **pyro-api**: Pyronear API (uvicorn)
 * **db**: PostgreSQL database
-* **minio**: S3-compatible storage (via MinIO)
+* **rustfs**: S3-compatible storage (via RustFS)
 * **frontend**: Web app (React, [pyro-platform](https://github.com/pyronear/pyro-platform))
 * **pyro-engine**: Engine service (requires cameras, optional)
 * **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
@@ -100,10 +101,11 @@ docker logs engine
 
   * Login: `DB_UI_MAIL` / `DB_UI_PWD` (set in `.env`)
   * First connection: register server with host `db`, user/password from `.env`
-* **MinIO console (S3 GUI)**: [http://localhost:9001](http://localhost:9001)
+* **RustFS console (S3 GUI)**: [http://localhost:9001/rustfs/console/](http://localhost:9001/rustfs/console/)
 
+  * Login: `S3_ACCESS_KEY` / `S3_SECRET_KEY` (set in `.env`)
   * Manage buckets, upload/delete files
-* **MinIO S3 API**: `minio:9000` from the compose network (`S3_ENDPOINT_URL`),
+* **RustFS S3 API**: `rustfs:9000` from the compose network (`S3_ENDPOINT_URL`),
   [http://localhost:9000](http://localhost:9000) from the host (`S3_PROXY_URL`, used
   for presigned image URLs)
 
@@ -125,7 +127,7 @@ API_URL = "http://api:5050"
 
 ### Update the last image for a camera
 
-1. Upload a new image in MinIO under the bucket ending with `...-alert-api-{organisation_id}`
+1. Upload a new image in RustFS under the bucket ending with `...-alert-api-{organisation_id}`
 2. In pgAdmin, update the `cameras` table:
 
    * `last_image` with the filename

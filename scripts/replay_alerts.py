@@ -78,7 +78,9 @@ def fetch(alert_ids):
             api_url, f"/api/v1/alerts/{alert_id}/sequences", headers, limit=100
         )
         cameras = {}
-        with zipfile.ZipFile(zip_path(alert_id), "w") as zf:
+        # Written to a temp file so a failed fetch never leaves a broken zip behind.
+        tmp = zip_path(alert_id).with_suffix(".tmp")
+        with zipfile.ZipFile(tmp, "w") as zf:
             for seq in sequences:
                 cam_id = seq["camera_id"]
                 if cam_id not in cameras:
@@ -115,6 +117,7 @@ def fetch(alert_ids):
             alert["sequences"] = sequences
             alert["cameras"] = cameras
             zf.writestr("alert.json", json.dumps(alert, indent=1))
+        tmp.replace(zip_path(alert_id))
         n_dets = sum(len(s["detections"]) for s in sequences)
         print(
             f"alert {alert_id}: {len(sequences)} sequences, {n_dets} detections, "
@@ -253,6 +256,7 @@ def replay_alert(alert_id, args, admin):
         poses[(prod_cam_id, azimuth)] = r.json()["id"]
 
     print(f"alert {alert_id}: replaying {len(rounds)} rounds ({args.mode} mode)")
+    failures = 0
     for i, frames in enumerate(rounds):
         for f in frames:
             data = {"bboxes": fmt_bboxes(f["boxes"]), "pose_id": poses[f["stream"]]}
@@ -266,18 +270,21 @@ def replay_alert(alert_id, args, admin):
                 timeout=60,
             )
             if r.status_code not in (201, 204):
+                failures += 1
                 print(f"  error on {f['image']}: {r.status_code} {r.text[:200]}")
         print(f"  round {i + 1}/{len(rounds)} sent ({len(frames)} frames)")
         if args.mode == "live" and i + 1 < len(rounds):
             time.sleep(args.interval)
+    return failures
 
 
 def replay(args):
     admin = login(
         args.api_url, os.environ["SUPERADMIN_LOGIN"], os.environ["SUPERADMIN_PWD"]
     )
-    for alert_id in args.alert_ids:
-        replay_alert(alert_id, args, admin)
+    failures = sum(replay_alert(a, args, admin) for a in args.alert_ids)
+    if failures:
+        sys.exit(f"{failures} detection uploads failed")
 
 
 def main():

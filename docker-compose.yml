@@ -16,7 +16,7 @@ services:
     - S3_ACCESS_KEY=${S3_ACCESS_KEY}
     - S3_SECRET_KEY=${S3_SECRET_KEY}
     - S3_REGION=${S3_REGION}
-    # Host used in presigned URLs, which the browser opens (`minio` is compose-only).
+    # Host used in presigned URLs, which the browser opens (`rustfs` is compose-only).
     - S3_PROXY_URL=${S3_PROXY_URL:-}
     - SERVER_NAME=${SERVER_NAME}
     - PLATFORM_URL=${PLATFORM_URL:-http://localhost:8080}
@@ -31,7 +31,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio:
+      rustfs:
         condition: service_healthy
   db:
     image: postgres:15-alpine
@@ -46,20 +46,20 @@ services:
       interval: 20s
       timeout: 10s
       retries: 10
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
-    container_name: minio
+  rustfs:
+    image: rustfs/rustfs:1.0.0
+    container_name: rustfs
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      - MINIO_ROOT_USER=${S3_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY}
+      - RUSTFS_ACCESS_KEY=${S3_ACCESS_KEY}
+      - RUSTFS_SECRET_KEY=${S3_SECRET_KEY}
+      - RUSTFS_CONSOLE_ENABLE=true
     volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      - rustfs_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health/ready"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -113,7 +113,7 @@ services:
       # Empty = auth disabled; set the same value as pyro-api to require a token.
       - TEMPORAL_API_TOKEN=${TEMPORAL_API_TOKEN:-}
     depends_on:
-      minio:
+      rustfs:
         condition: service_healthy
 
   etl_scripts:
@@ -186,4 +186,4 @@ services:
       - db
 
 volumes:
-  minio_data:
+  rustfs_data:

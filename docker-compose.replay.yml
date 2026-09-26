@@ -1,0 +1,23 @@
+# Override for accelerated day replays (scripts/replay_day.py).
+#
+# Clock mode (recommended, scripts/replay_day.py --clock): the API runs with a
+# simulated accelerated clock (patch on branch replay-clock-20260710 of pyro-api).
+# created_at values land directly on the replayed day's hours and every
+# utcnow-anchored window behaves exactly as in production — no window scaling.
+# The three REPLAY_CLOCK_* variables are exported by replay_day.py --clock when
+# it restarts pyro_api.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.replay.yml up -d ...
+services:
+  pyro_api:
+    environment:
+      - REPLAY_CLOCK_SPEED=${REPLAY_CLOCK_SPEED:-}
+      - REPLAY_CLOCK_SIM_ORIGIN=${REPLAY_CLOCK_SIM_ORIGIN:-}
+      - REPLAY_CLOCK_REAL_ORIGIN=${REPLAY_CLOCK_REAL_ORIGIN:-}
+      # interactive mode: piecewise clock controlled live via scripts/replay_ctl.py
+      - REPLAY_CLOCK_FILE=/replay/clock.json
+      # disable the temporal-model gate for replays (fail-open, era-faithful)
+      - TEMPORAL_API_URL=
+    volumes:
+      - ./replay_control:/replay:ro

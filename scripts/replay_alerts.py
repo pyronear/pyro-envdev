@@ -59,6 +59,13 @@ def get(api_url, path, headers, **params):
     return r.json()
 
 
+def download(zf, name, url):
+    if name not in zf.namelist():
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        zf.writestr(name, r.content)
+
+
 def zip_path(alert_id):
     return ALERTS_DIR / f"alert_{alert_id}.zip"
 
@@ -103,16 +110,22 @@ def fetch(alert_ids):
                     )
                     for det in page:
                         image = f"images/{det['bucket_key']}"
-                        if image not in zf.namelist():
-                            img = requests.get(det["url"], timeout=60)
-                            img.raise_for_status()
-                            zf.writestr(image, img.content)
+                        download(zf, image, det["url"])
+                        crop = None
+                        if det["crop_bucket_key"]:
+                            # Detection lists return crop_url=null, only /url signs it.
+                            crop = f"crops/{det['crop_bucket_key']}"
+                            urls = get(
+                                api_url, f"/api/v1/detections/{det['id']}/url", headers
+                            )
+                            download(zf, crop, urls["crop_url"])
                         seq["detections"].append(
                             {
                                 "recorded_at": det["recorded_at"],
                                 "bbox": det["bbox"],
                                 "others_bboxes": det["others_bboxes"],
                                 "image": image,
+                                "crop": crop,
                             }
                         )
                     if len(page) < 100:
@@ -194,12 +207,16 @@ def build_rounds(alert):
         for det in seq["detections"]:
             frame = frames.setdefault(
                 det["image"],
-                {"stream": stream, "image": det["image"], "boxes": []},
+                {"stream": stream, "image": det["image"], "boxes": [], "crops": {}},
             )
             frame["recorded_at"] = datetime.fromisoformat(det["recorded_at"])
-            for box in parse_bboxes(det["bbox"]) + parse_bboxes(det["others_bboxes"]):
+            own = parse_bboxes(det["bbox"])
+            for box in own + parse_bboxes(det["others_bboxes"]):
                 if box not in frame["boxes"]:
                     frame["boxes"].append(box)
+            # A prod detection holds one box and the crop of that box.
+            if det.get("crop") and len(own) == 1:
+                frame["crops"][own[0]] = det["crop"]
     streams = {}
     for frame in sorted(frames.values(), key=lambda f: f["recorded_at"]):
         streams.setdefault(frame["stream"], []).append(frame)
@@ -270,11 +287,16 @@ def replay_alert(alert_id, args, admin):
             data = {"bboxes": fmt_bboxes(f["boxes"]), "pose_id": poses[f["stream"]]}
             if args.mode == "demo":
                 data["recorded_at"] = (f["recorded_at"] + offset).isoformat()
+            files = [("file", ("frame.jpg", zf.read(f["image"]), "image/jpeg"))]
+            # The API wants one crop per box, in the same order, or none at all.
+            crops = [f["crops"].get(b) for b in f["boxes"]]
+            if crops and all(crops):
+                files += [("crop", ("crop.jpg", zf.read(c), "image/jpeg")) for c in crops]
             r = requests.post(
                 f"{api}/api/v1/detections/",
                 headers=tokens[f["stream"][0]],
                 data=data,
-                files={"file": ("frame.jpg", zf.read(f["image"]), "image/jpeg")},
+                files=files,
                 timeout=60,
             )
             if r.status_code not in (201, 204):

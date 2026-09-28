@@ -143,8 +143,8 @@ make fetch-alerts ALERTS="54095"      # writes data/replay_alerts/alert_54095.zi
 make publish-alerts ALERTS="54095"    # uploads it to the release
 ```
 
-A zip holds `alert.json` (alert, sequences, detections, cameras) and the detection
-images. `publish` creates the release if needed and overwrites an existing zip.
+A zip holds `alert.json` (alert, sequences, detections, cameras), the detection
+images and their crops. `publish` creates the release if needed and overwrites an existing zip.
 `replay` uses the local zip when present, so publishing is only needed to share.
 
 

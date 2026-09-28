@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["requests", "python-dotenv"]
+# ///
 """Fetch real alerts from the production alert API, share them through a GitHub
 release, and replay them on the local stack.
 
@@ -12,9 +16,9 @@ release, and replay them on the local stack.
                         time of day (--date today) or as in prod (--date original)
 
 Examples:
-  python3 scripts/replay_alerts.py fetch 54095
-  python3 scripts/replay_alerts.py publish 54095
-  python3 scripts/replay_alerts.py replay 54095 --mode demo
+  uv run scripts/replay_alerts.py fetch 54095
+  uv run scripts/replay_alerts.py publish 54095
+  uv run scripts/replay_alerts.py replay 54095 --mode demo
 """
 
 import argparse
@@ -134,7 +138,8 @@ def publish(alert_ids):
     if subprocess.run([*gh, "view", RELEASE_TAG], capture_output=True).returncode:
         notes = "Real alerts for scripts/replay_alerts.py"
         subprocess.run(
-            [*gh, "create", RELEASE_TAG, "--title", "Replay alerts", "--notes", notes],
+            [*gh, "create", RELEASE_TAG, "--title", "Replay alerts", "--notes", notes,
+             "--latest=false"],
             check=True,
         )
     subprocess.run([*gh, "upload", RELEASE_TAG, *files, "--clobber"], check=True)
@@ -145,6 +150,9 @@ def list_alerts():
         f"https://api.github.com/repos/{GITHUB_REPO}/releases/tags/{RELEASE_TAG}",
         timeout=30,
     )
+    if r.status_code == 404:
+        print("no alerts published")
+        return
     r.raise_for_status()
     for asset in r.json()["assets"]:
         print(asset["name"].removeprefix("alert_").removesuffix(".zip"))

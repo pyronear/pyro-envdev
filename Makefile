@@ -116,13 +116,13 @@ test:
 MODE ?= demo
 
 fetch-alerts:
-	python3 scripts/replay_alerts.py fetch $(ALERTS)
+	uv run scripts/replay_alerts.py fetch $(ALERTS)
 
 publish-alerts:
-	python3 scripts/replay_alerts.py publish $(ALERTS)
+	uv run scripts/replay_alerts.py publish $(ALERTS)
 
 list-alerts:
-	python3 scripts/replay_alerts.py list
+	uv run scripts/replay_alerts.py list
 
 replay-alerts:
-	python3 scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE)
+	uv run scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE)

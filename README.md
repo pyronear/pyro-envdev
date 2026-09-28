@@ -122,7 +122,7 @@ Create a directory `data/images` before starting the environment and put your im
 `scripts/replay_alerts.py` replays real production alerts (all their sequences and
 images) on the local stack. Alerts are stored as `alert_<id>.zip` in the
 [`replay-alerts`](https://github.com/pyronear/pyro-envdev/releases/tag/replay-alerts)
-GitHub release. Needs `requests` and `python-dotenv` on the host.
+GitHub release. Needs [uv](https://docs.astral.sh/uv/) (dependencies are installed on the fly).
 
 ```bash
 make list-alerts                                  # alerts available in the release
@@ -142,6 +142,10 @@ Add new alerts (needs prod admin creds `DISTANT_*` in `.env`, and `gh` for publi
 make fetch-alerts ALERTS="54095"      # writes data/replay_alerts/alert_54095.zip
 make publish-alerts ALERTS="54095"    # uploads it to the release
 ```
+
+A zip holds `alert.json` (alert, sequences, detections, cameras) and the detection
+images. `publish` creates the release if needed and overwrites an existing zip.
+`replay` uses the local zip when present, so publishing is only needed to share.
 
 
 ### Update the last image for a camera

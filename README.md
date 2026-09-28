@@ -127,11 +127,14 @@ GitHub release. Needs [uv](https://docs.astral.sh/uv/) (dependencies are install
 ```bash
 make list-alerts                                  # alerts available in the release
 make replay-alerts ALERTS="53800 53941"           # demo mode (default)
+make replay-alerts ALERTS=53800 START=2026-07-10T18:53  # demo, first frame at a given local time
 make replay-alerts ALERTS=53800 MODE=live         # live mode
 ```
 
-* **demo**: posts everything at once, dated today at the original time of day.
-  Add `--date original` (script only) to keep the original dates.
+* **demo**: posts everything at once, shifted as a block (gaps between frames kept)
+  so its latest sequence starts 1 hour ago, or its first frame is at `START` (local
+  time). A sequence starting in the future does not triangulate: the API dates
+  `last_seen_at` with the server time.
 * **live**: sends one frame per camera every 30 s (`--interval`), dated now.
 * Missing cameras are created by name in organization 2 (`--org-id`), so the
   alerts show up for the `test77` user.

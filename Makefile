@@ -125,4 +125,4 @@ list-alerts:
 	uv run scripts/replay_alerts.py list
 
 replay-alerts:
-	uv run scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE)
+	uv run scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE) $(if $(START),--start $(START))

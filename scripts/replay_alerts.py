@@ -12,8 +12,9 @@ release, and replay them on the local stack.
   list                  list the alerts available in the release
   replay ALERT_ID...    replay alerts on the local API, one after the other
       --mode live       one frame per camera every --interval seconds, timestamped now
-      --mode demo       post everything at once, timestamped today at the original
-                        time of day (--date today) or as in prod (--date original)
+      --mode demo       post everything at once, shifted as a block: the first frame at
+                        --start (local time), or by default the latest sequence
+                        starting 1 hour ago
 
 Examples:
   uv run scripts/replay_alerts.py fetch 54095
@@ -29,7 +30,7 @@ import subprocess
 import sys
 import time
 import zipfile
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from pathlib import Path
 
@@ -223,12 +224,9 @@ def build_rounds(alert):
     return [[f for f in r if f] for r in zip_longest(*streams.values())]
 
 
-def day_offset(rounds, when):
-    """Shift to apply to recorded_at: whole days, so all frames move together."""
-    if when == "original":
-        return timedelta(0)
-    first = min(f["recorded_at"] for r in rounds for f in r)
-    return timedelta(days=(date.today() - first.date()).days)
+def utc_start(s):
+    """--start value: local time (naive) or with offset, returned as naive UTC."""
+    return datetime.fromisoformat(s).astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def load_alert(alert_id):
@@ -247,10 +245,20 @@ def load_alert(alert_id):
 def replay_alert(alert_id, args, admin):
     zf, alert = load_alert(alert_id)
     rounds = build_rounds(alert)
-    offset = day_offset(rounds, args.date)
-    last = max(f["recorded_at"] for r in rounds for f in r) + offset
-    if args.mode == "demo" and last > datetime.now(timezone.utc).replace(tzinfo=None):
-        print(f"warning: alert {alert_id} ends at {last} UTC, later than now")
+    # One shift for all frames keeps the gaps between them as in prod.
+    frames = [f for r in rounds for f in r]
+    first = min(f["recorded_at"] for f in frames)
+    latest_start = max(
+        min(f["recorded_at"] for f in frames if f["stream"] == s)
+        for s in {f["stream"] for f in frames}
+    )
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Default: the latest sequence starts 1 hour ago, so every sequence starts in the past.
+    offset = args.start - first if args.start else now - timedelta(hours=1) - latest_start
+    if args.mode == "demo" and latest_start + offset > now:
+        # The API sets last_seen_at to server time: a future started_at is out of the
+        # triangulation time window.
+        print(f"warning: alert {alert_id} has a sequence starting in the future")
 
     api = args.api_url
     local_cams = {c["name"]: c["id"] for c in get(api, "/api/v1/cameras/", admin)}
@@ -328,7 +336,9 @@ def main():
     p = sub.add_parser("replay")
     p.add_argument("alert_ids", nargs="+", type=int)
     p.add_argument("--mode", choices=("live", "demo"), default="demo")
-    p.add_argument("--date", choices=("today", "original"), default="today")
+    p.add_argument(
+        "--start", type=utc_start, help="demo mode, first frame time, e.g. 2026-07-10T18:53"
+    )
     p.add_argument("--interval", type=float, default=30, help="live mode, seconds")
     p.add_argument("--api-url", default="http://localhost:5050")
     p.add_argument("--org-id", type=int, default=2, help="org of created cameras")

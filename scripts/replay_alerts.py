@@ -201,6 +201,9 @@ def build_rounds(alert):
     A prod upload with several boxes yields one detection per box plus continuity
     rows, all sharing the image: they are replayed as a single upload. Round k holds
     the k-th frame of every (camera, azimuth) stream, like parallel real cameras.
+    Only the alert's own boxes are replayed: `others_bboxes` belong to sequences
+    outside the alert, which prod may have rejected but the local stack would
+    validate (no temporal model) into extra alerts.
     """
     frames = {}
     for seq in alert["sequences"]:
@@ -212,7 +215,7 @@ def build_rounds(alert):
             )
             frame["recorded_at"] = datetime.fromisoformat(det["recorded_at"])
             own = parse_bboxes(det["bbox"])
-            for box in own + parse_bboxes(det["others_bboxes"]):
+            for box in own:
                 if box not in frame["boxes"]:
                     frame["boxes"].append(box)
             # A prod detection holds one box and the crop of that box.

@@ -46,6 +46,7 @@ ALERTS_DIR = REPO_ROOT / "data" / "replay_alerts"
 GITHUB_REPO = "pyronear/pyro-envdev"
 RELEASE_TAG = "replay-alerts"
 CAMERA_FIELDS = ("name", "angle_of_view", "elevation", "lat", "lon")
+POSE_FIELDS = ("id", "azimuth", "patrol_id")
 
 
 def login(api_url, username, password):
@@ -102,6 +103,9 @@ def fetch(alert_ids):
                 if cam_id not in cameras:
                     cam = get(api_url, f"/api/v1/cameras/{cam_id}", headers)
                     cameras[cam_id] = {k: cam[k] for k in CAMERA_FIELDS}
+                    cameras[cam_id]["poses"] = [
+                        {k: p[k] for k in POSE_FIELDS} for p in cam["poses"]
+                    ]
                 seq["detections"] = []
                 offset = 0
                 while True:
@@ -272,26 +276,74 @@ def load_alert(alert_id):
     return zf, json.loads(zf.read("alert.json"))
 
 
-def find_cameras(alert, args, admin):
-    """Find the alert's cameras locally by name, creating the missing ones.
+def sync_cameras(alert, args, admin):
+    """Make the alert's local cameras match prod: position, elevation and poses.
 
-    Returns {prod camera id: local camera}.
+    Missing cameras are created. Returns {prod camera id: local camera} and
+    {prod pose id: local pose id}.
     """
     api = args.api_url
     local_cams = {c["name"]: c for c in get(api, "/api/v1/cameras/", admin)}
-    cams = {}
+    cams, pose_ids = {}, {}
     for prod_id, cam in alert["cameras"].items():
         name = cam["name"]
-        if name not in local_cams:
-            payload = {**cam, "organization_id": args.org_id, "is_trustable": True}
+        local = local_cams.get(name)
+        if local is None:
+            payload = {k: cam[k] for k in CAMERA_FIELDS}
+            payload.update(organization_id=args.org_id, is_trustable=True)
             r = requests.post(
                 f"{api}/api/v1/cameras/", headers=admin, json=payload, timeout=30
             )
             r.raise_for_status()
-            local_cams[name] = r.json()
-            print(f"created camera {name} (id {local_cams[name]['id']})")
-        cams[int(prod_id)] = local_cams[name]
-    return cams
+            local = {**r.json(), "poses": []}
+            print(f"created camera {name} (id {local['id']})")
+        elif any(local[k] != cam[k] for k in ("lat", "lon", "elevation")):
+            payload = {k: cam[k] for k in ("lat", "lon", "elevation")}
+            r = requests.patch(
+                f"{api}/api/v1/cameras/{local['id']}/location",
+                headers=admin,
+                json=payload,
+                timeout=30,
+            )
+            r.raise_for_status()
+            print(f"updated {name} position to prod")
+        cams[int(prod_id)] = local
+        if "poses" in cam:  # zips fetched before poses were stored have none
+            pose_ids.update(sync_poses(api, admin, local, cam["poses"]))
+    return cams, pose_ids
+
+
+def sync_poses(api, admin, camera, prod_poses):
+    """Match the camera's active local poses to the prod ones: reuse the one at the
+    same azimuth, create the missing ones, deactivate the rest (seeded or left by
+    earlier replays; deactivated, not deleted, as old sequences reference them)."""
+    free = list(camera["poses"])
+    ids = {}
+    for p in prod_poses:
+        pose = next((q for q in free if abs(q["azimuth"] - p["azimuth"]) < 0.05), None)
+        if pose is None:
+            payload = {"camera_id": camera["id"], **p}
+            del payload["id"]
+            r = requests.post(
+                f"{api}/api/v1/poses/", headers=admin, json=payload, timeout=30
+            )
+            r.raise_for_status()
+            pose = r.json()
+        else:
+            free.remove(pose)
+            if pose["patrol_id"] != p["patrol_id"]:
+                patch_pose(api, admin, pose["id"], patrol_id=p["patrol_id"])
+        ids[p["id"]] = pose["id"]
+    for pose in free:
+        patch_pose(api, admin, pose["id"], active=False)
+    return ids
+
+
+def patch_pose(api, admin, pose_id, **fields):
+    r = requests.patch(
+        f"{api}/api/v1/poses/{pose_id}", headers=admin, json=fields, timeout=30
+    )
+    r.raise_for_status()
 
 
 def camera_token(api, camera_id, admin):
@@ -302,26 +354,36 @@ def camera_token(api, camera_id, admin):
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-def setup_cameras(alert, streams, args, admin):
-    """Find or create the alert's cameras locally, then a fresh pose per stream.
+def setup_cameras(alert, args, admin):
+    """Sync the alert's cameras with prod and pick the local pose of each stream.
 
     Returns {prod camera id: local camera}, {stream: local pose id}.
     """
     api = args.api_url
-    cams = find_cameras(alert, args, admin)
+    cams, pose_ids = sync_cameras(alert, args, admin)
     # Images are stored and served per organization bucket: one org per alert.
     orgs = {c["name"]: c["organization_id"] for c in cams.values()}
     if len(set(orgs.values())) > 1:
         sys.exit(f"alert cameras span several organizations: {orgs}")
-    # A fresh pose per stream keeps this replay apart from earlier ones.
+    # Each sequence goes to the local copy of its prod pose.
     poses = {}
-    for prod_cam_id, azimuth in streams:
-        payload = {"camera_id": cams[prod_cam_id]["id"], "azimuth": azimuth}
-        r = requests.post(
-            f"{api}/api/v1/poses/", headers=admin, json=payload, timeout=30
-        )
-        r.raise_for_status()
-        poses[(prod_cam_id, azimuth)] = r.json()["id"]
+    for s in alert["sequences"]:
+        stream = (s["camera_id"], s["camera_azimuth"])
+        if stream in poses:
+            continue
+        poses[stream] = pose_ids.get(s["pose_id"])
+        if poses[stream] is None:
+            # Prod pose deleted since, or zip without poses: an inactive stand-in.
+            payload = {
+                "camera_id": cams[s["camera_id"]]["id"],
+                "azimuth": s["camera_azimuth"],
+                "active": False,
+            }
+            r = requests.post(
+                f"{api}/api/v1/poses/", headers=admin, json=payload, timeout=30
+            )
+            r.raise_for_status()
+            poses[stream] = r.json()["id"]
     return cams, poses
 
 
@@ -329,9 +391,7 @@ def replay_live(alert_id, args, admin):
     """Post frames through the API, timestamped now: exercises the whole pipeline."""
     zf, alert = load_alert(alert_id)
     rounds = build_rounds(alert)
-    cams, poses = setup_cameras(
-        alert, {f["stream"] for r in rounds for f in r}, args, admin
-    )
+    cams, poses = setup_cameras(alert, args, admin)
     tokens = {
         prod_id: camera_token(args.api_url, cam["id"], admin)
         for prod_id, cam in cams.items()
@@ -375,8 +435,7 @@ def replay_demo(alert_id, args, admin):
     seqs = alert["sequences"]
     started = [datetime.fromisoformat(s["started_at"]) for s in seqs]
     offset = time_offset(started, args.start)
-    streams = {(s["camera_id"], s["camera_azimuth"]) for s in seqs}
-    cams, poses = setup_cameras(alert, streams, args, admin)
+    cams, poses = setup_cameras(alert, args, admin)
     org_id = next(iter(cams.values()))["organization_id"]
 
     s3 = boto3.client(

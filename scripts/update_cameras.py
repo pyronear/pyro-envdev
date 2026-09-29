@@ -3,11 +3,12 @@
 # requires-python = ">=3.9"
 # dependencies = ["requests", "python-dotenv", "boto3", "psycopg[binary]"]
 # ///
-"""Refresh the local cameras seen in the replay alerts: last image and ping.
+"""Refresh the local cameras seen in the replay alerts: prod setup, last image, ping.
 
-For each camera of the given alerts (default: every published alert), upload its most
-recent image from the alerts as the camera's last image, then send a heartbeat, as a
-real camera would. Missing cameras are created like in replay_alerts.py.
+For each camera of the given alerts (default: every published alert), set its prod
+position, elevation and poses, upload its most recent image from the alerts as the
+camera's last image, then send a heartbeat, as a real camera would. Missing cameras
+are created like in replay_alerts.py.
 
 Examples:
   uv run scripts/update_cameras.py
@@ -24,10 +25,10 @@ from dotenv import load_dotenv
 from replay_alerts import (
     REPO_ROOT,
     camera_token,
-    find_cameras,
     load_alert,
     login,
     published_alerts,
+    sync_cameras,
 )
 
 
@@ -48,7 +49,7 @@ def main():
     latest = {}
     for alert_id in args.alert_ids or published_alerts():
         zf, alert = load_alert(alert_id)
-        cams = find_cameras(alert, args, admin)
+        cams, _ = sync_cameras(alert, args, admin)
         for s in alert["sequences"]:
             cam = cams[s["camera_id"]]
             for d in s["detections"]:

@@ -151,12 +151,15 @@ Published alerts (`make list-alerts` for the up-to-date list):
   dated now, so validation and triangulation run locally. Replays within 2 hours of
   each other get triangulated together when their cones cross: use a fresh stack
   (`make stop && make run`) per alert.
-* Missing cameras are created by name in organization 2 (`--org-id`), so the
-  alerts show up for the `test77` user.
+* Cameras are matched by name and set up as in prod (position, elevation, poses);
+  local poses that do not exist in prod (seeded or left by older replays) are
+  deactivated. Each sequence is attached to the local copy of its prod pose. Missing
+  cameras are created in organization 2 (`--org-id`), so the alerts show up for the
+  `test77` user.
 
-To make the alert cameras look alive, `make update-cameras` sets each camera's last
-image to its most recent image in the published alerts (or `ALERTS="..."`) and sends
-a heartbeat, as a real camera would. The ping goes stale like a real one: run it again
+To make the alert cameras look alive, `make update-cameras` sets up each camera of the
+published alerts (or `ALERTS="..."`) as in prod, sets its last image to its most
+recent image in those alerts and sends a heartbeat, as a real camera would. The ping goes stale like a real one: run it again
 before a demo.
 
 To test the replay:

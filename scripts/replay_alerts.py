@@ -171,17 +171,23 @@ def publish(alert_ids):
     subprocess.run([*gh, "upload", RELEASE_TAG, *files, "--clobber"], check=True)
 
 
-def list_alerts():
+def published_alerts():
     r = requests.get(
         f"https://api.github.com/repos/{GITHUB_REPO}/releases/tags/{RELEASE_TAG}",
         timeout=30,
     )
     if r.status_code == 404:
-        print("no alerts published")
-        return
+        return []
     r.raise_for_status()
-    for asset in r.json()["assets"]:
-        print(asset["name"].removeprefix("alert_").removesuffix(".zip"))
+    return [
+        int(a["name"].removeprefix("alert_").removesuffix(".zip"))
+        for a in r.json()["assets"]
+    ]
+
+
+def list_alerts():
+    ids = published_alerts()
+    print("\n".join(map(str, ids)) if ids else "no alerts published")
 
 
 # -------------------------------------------------------------------
@@ -266,10 +272,10 @@ def load_alert(alert_id):
     return zf, json.loads(zf.read("alert.json"))
 
 
-def setup_cameras(alert, streams, args, admin):
-    """Find or create the alert's cameras locally, then a fresh pose per stream.
+def find_cameras(alert, args, admin):
+    """Find the alert's cameras locally by name, creating the missing ones.
 
-    Returns {prod camera id: local camera}, {stream: local pose id}.
+    Returns {prod camera id: local camera}.
     """
     api = args.api_url
     local_cams = {c["name"]: c for c in get(api, "/api/v1/cameras/", admin)}
@@ -285,6 +291,24 @@ def setup_cameras(alert, streams, args, admin):
             local_cams[name] = r.json()
             print(f"created camera {name} (id {local_cams[name]['id']})")
         cams[int(prod_id)] = local_cams[name]
+    return cams
+
+
+def camera_token(api, camera_id, admin):
+    r = requests.post(
+        f"{api}/api/v1/cameras/{camera_id}/token", headers=admin, timeout=30
+    )
+    r.raise_for_status()
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def setup_cameras(alert, streams, args, admin):
+    """Find or create the alert's cameras locally, then a fresh pose per stream.
+
+    Returns {prod camera id: local camera}, {stream: local pose id}.
+    """
+    api = args.api_url
+    cams = find_cameras(alert, args, admin)
     # Images are stored and served per organization bucket: one org per alert.
     orgs = {c["name"]: c["organization_id"] for c in cams.values()}
     if len(set(orgs.values())) > 1:
@@ -308,15 +332,10 @@ def replay_live(alert_id, args, admin):
     cams, poses = setup_cameras(
         alert, {f["stream"] for r in rounds for f in r}, args, admin
     )
-    tokens = {}
-    for prod_id, cam in cams.items():
-        r = requests.post(
-            f"{args.api_url}/api/v1/cameras/{cam['id']}/token",
-            headers=admin,
-            timeout=30,
-        )
-        r.raise_for_status()
-        tokens[prod_id] = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    tokens = {
+        prod_id: camera_token(args.api_url, cam["id"], admin)
+        for prod_id, cam in cams.items()
+    }
 
     print(f"alert {alert_id}: replaying {len(rounds)} rounds (live mode)")
     failures = 0

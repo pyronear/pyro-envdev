@@ -23,6 +23,7 @@ help:
 	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=54194"
 	@echo "  publish-alerts      Upload fetched alerts to the replay-alerts GitHub release"
 	@echo "  list-alerts         List the alerts available in the release"
+	@echo "  update-cameras      Set last image and ping of the alert cameras: make update-cameras [ALERTS=49767]"
 	@echo "  replay-alerts       Replay alerts locally: make replay-alerts ALERTS=\"49767 54194\" [MODE=live] [START=...]"
 
 # -------------------------------------------------------------------
@@ -126,3 +127,6 @@ list-alerts:
 
 replay-alerts:
 	uv run scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE) $(if $(START),--start $(START))
+
+update-cameras:
+	uv run scripts/update_cameras.py $(ALERTS)

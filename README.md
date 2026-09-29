@@ -154,6 +154,11 @@ Published alerts (`make list-alerts` for the up-to-date list):
 * Missing cameras are created by name in organization 2 (`--org-id`), so the
   alerts show up for the `test77` user.
 
+To make the alert cameras look alive, `make update-cameras` sets each camera's last
+image to its most recent image in the published alerts (or `ALERTS="..."`) and sends
+a heartbeat, as a real camera would. The ping goes stale like a real one: run it again
+before a demo.
+
 Add new alerts (needs prod admin creds `DISTANT_*` in `.env`, and `gh` for publishing):
 
 ```bash

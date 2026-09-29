@@ -20,6 +20,12 @@ help:
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
 	@echo "  test                Run pytest"
+	@echo "  test-replay         Unit tests of the replay scripts (no stack needed)"
+	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=54194"
+	@echo "  publish-alerts      Upload fetched alerts to the replay-alerts GitHub release"
+	@echo "  list-alerts         List the alerts available in the release"
+	@echo "  update-cameras      Set last image and ping of the alert cameras: make update-cameras [ALERTS=49767]"
+	@echo "  replay-alerts       Replay alerts locally: make replay-alerts ALERTS=\"49767 54194\" [MODE=live] [START=...]"
 
 # -------------------------------------------------------------------
 # Init
@@ -104,3 +110,27 @@ logs:
 
 test:
 	pytest -s tests/*
+
+test-replay:
+	uv run --with-requirements tests/requirements.txt pytest -q tests/test_replay_alerts.py
+
+# -------------------------------------------------------------------
+# Real alert replays (see scripts/replay_alerts.py)
+# -------------------------------------------------------------------
+
+MODE ?= demo
+
+fetch-alerts:
+	uv run scripts/replay_alerts.py fetch $(ALERTS)
+
+publish-alerts:
+	uv run scripts/replay_alerts.py publish $(ALERTS)
+
+list-alerts:
+	uv run scripts/replay_alerts.py list
+
+replay-alerts:
+	uv run scripts/replay_alerts.py replay $(ALERTS) --mode $(MODE) $(if $(START),--start $(START))
+
+update-cameras:
+	uv run scripts/update_cameras.py $(ALERTS)

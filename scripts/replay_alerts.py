@@ -244,6 +244,15 @@ def utc_start(s):
     return datetime.fromisoformat(s).astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def time_offset(starts, start=None, now=None):
+    """One shift for all rows, keeping the prod timeline: the first sequence starts at
+    `start`, or by default the latest one starts 1 hour ago."""
+    if start:
+        return start - min(starts)
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    return now - timedelta(hours=1) - max(starts)
+
+
 def load_alert(alert_id):
     path = zip_path(alert_id)
     if not path.is_file():
@@ -346,14 +355,7 @@ def replay_demo(alert_id, args, admin):
     zf, alert = load_alert(alert_id)
     seqs = alert["sequences"]
     started = [datetime.fromisoformat(s["started_at"]) for s in seqs]
-    # One shift for all rows keeps the prod timeline. Default: the latest sequence
-    # starts 1 hour ago.
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    offset = (
-        args.start - min(started)
-        if args.start
-        else now - timedelta(hours=1) - max(started)
-    )
+    offset = time_offset(started, args.start)
     streams = {(s["camera_id"], s["camera_azimuth"]) for s in seqs}
     cams, poses = setup_cameras(alert, streams, args, admin)
     org_id = next(iter(cams.values()))["organization_id"]
@@ -450,8 +452,9 @@ def insert_alert(alert, cams, poses, org_id, keys, offset):
             )
             with conn.cursor() as cur:
                 cur.executemany(
-                    "INSERT INTO detections (camera_id, pose_id, sequence_id, bucket_key,"
-                    " crop_bucket_key, bbox, others_bboxes, created_at, recorded_at)"
+                    "INSERT INTO detections (camera_id, pose_id, sequence_id,"
+                    " bucket_key, crop_bucket_key, bbox, others_bboxes, created_at,"
+                    " recorded_at)"
                     " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     [
                         (

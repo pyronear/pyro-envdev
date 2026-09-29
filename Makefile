@@ -20,10 +20,10 @@ help:
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
 	@echo "  test                Run pytest"
-	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=\"54095 53800\""
+	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=54194"
 	@echo "  publish-alerts      Upload fetched alerts to the replay-alerts GitHub release"
 	@echo "  list-alerts         List the alerts available in the release"
-	@echo "  replay-alerts       Replay alerts locally: make replay-alerts ALERTS=53800 MODE=live"
+	@echo "  replay-alerts       Replay alerts locally: make replay-alerts ALERTS=\"49767 54194\" [MODE=live] [START=...]"
 
 # -------------------------------------------------------------------
 # Init

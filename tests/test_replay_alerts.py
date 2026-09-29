@@ -1,14 +1,14 @@
 import sys
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from replay_alerts import (  # noqa: E402
     build_rounds,
-    day_offset,
     fmt_bboxes,
     parse_bboxes,
+    time_offset,
 )
 
 
@@ -60,16 +60,14 @@ def test_build_rounds_merges_shared_images_and_interleaves_cameras():
     assert rounds[0][1]["boxes"] == []
 
 
-def test_day_offset():
-    alert = {
-        "sequences": [
-            {
-                "camera_id": 1,
-                "camera_azimuth": 0.0,
-                "detections": [det("2026-01-01T23:59:00", "a", "[]")],
-            }
-        ]
-    }
-    rounds = build_rounds(alert)
-    assert day_offset(rounds, "original") == timedelta(0)
-    assert day_offset(rounds, "today") == date.today() - date(2026, 1, 1)
+def test_time_offset():
+    starts = [datetime(2026, 1, 1, 10), datetime(2026, 1, 1, 11)]
+    # --start places the first sequence start
+    assert time_offset(starts, datetime(2026, 5, 1, 8)) == datetime(
+        2026, 5, 1, 8
+    ) - datetime(2026, 1, 1, 10)
+    # default: the latest sequence starts 1 hour before now
+    now = datetime(2026, 6, 1, 12)
+    offset = time_offset(starts, now=now)
+    assert starts[1] + offset == now - timedelta(hours=1)
+    assert starts[0] + offset == now - timedelta(hours=2)

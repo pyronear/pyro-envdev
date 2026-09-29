@@ -159,6 +159,19 @@ image to its most recent image in the published alerts (or `ALERTS="..."`) and s
 a heartbeat, as a real camera would. The ping goes stale like a real one: run it again
 before a demo.
 
+To test the replay:
+
+```bash
+make test-replay                     # unit tests (bboxes, frames, time shift), no stack needed
+make run                             # then, end to end on the local stack:
+make replay-alerts ALERTS="49767 54194"
+make update-cameras
+```
+
+Log in at [http://localhost:8080](http://localhost:8080) as `test77` / `test`: both alerts
+are listed as live, each at its prod location, with images and crops, and their
+cameras have a recent image. `make stop && make run` starts again from an empty DB.
+
 Add new alerts (needs prod admin creds `DISTANT_*` in `.env`, and `gh` for publishing):
 
 ```bash

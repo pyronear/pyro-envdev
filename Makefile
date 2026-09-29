@@ -20,6 +20,7 @@ help:
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
 	@echo "  test                Run pytest"
+	@echo "  test-replay         Unit tests of the replay scripts (no stack needed)"
 	@echo "  fetch-alerts        Download prod alerts: make fetch-alerts ALERTS=54194"
 	@echo "  publish-alerts      Upload fetched alerts to the replay-alerts GitHub release"
 	@echo "  list-alerts         List the alerts available in the release"
@@ -109,6 +110,9 @@ logs:
 
 test:
 	pytest -s tests/*
+
+test-replay:
+	uv run --with-requirements tests/requirements.txt pytest -q tests/test_replay_alerts.py
 
 # -------------------------------------------------------------------
 # Real alert replays (see scripts/replay_alerts.py)

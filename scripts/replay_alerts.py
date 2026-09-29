@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.9"
-# dependencies = ["requests", "python-dotenv"]
+# dependencies = ["requests", "python-dotenv", "boto3", "psycopg[binary]"]
 # ///
 """Fetch real alerts from the production alert API, share them through a GitHub
 release, and replay them on the local stack.
@@ -10,11 +10,12 @@ release, and replay them on the local stack.
                         (needs the admin DISTANT_* credentials in .env)
   publish ALERT_ID...   upload the zips to the `replay-alerts` GitHub release (needs gh)
   list                  list the alerts available in the release
-  replay ALERT_ID...    replay alerts on the local API, one after the other
-      --mode live       one frame per camera every --interval seconds, timestamped now
-      --mode demo       post everything at once, shifted as a block: the first frame at
-                        --start (local time), or by default the latest sequence
-                        starting 1 hour ago
+  replay ALERT_ID...    replay alerts on the local stack, one after the other
+      --mode demo       copy the prod alert as is (images to the bucket, rows into the
+                        DB), shifted as a block: the first sequence starts at --start
+                        (local time), or by default the latest one starts 1 hour ago
+      --mode live       post one frame per camera every --interval seconds through the
+                        API, timestamped now: validation and triangulation run locally
 
 Examples:
   uv run scripts/replay_alerts.py fetch 54095
@@ -29,11 +30,14 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 import zipfile
 from datetime import datetime, timedelta, timezone
 from itertools import zip_longest
 from pathlib import Path
 
+import boto3
+import psycopg
 import requests
 from dotenv import load_dotenv
 
@@ -152,8 +156,16 @@ def publish(alert_ids):
     if subprocess.run([*gh, "view", RELEASE_TAG], capture_output=True).returncode:
         notes = "Real alerts for scripts/replay_alerts.py"
         subprocess.run(
-            [*gh, "create", RELEASE_TAG, "--title", "Replay alerts", "--notes", notes,
-             "--latest=false"],
+            [
+                *gh,
+                "create",
+                RELEASE_TAG,
+                "--title",
+                "Replay alerts",
+                "--notes",
+                notes,
+                "--latest=false",
+            ],
             check=True,
         )
     subprocess.run([*gh, "upload", RELEASE_TAG, *files, "--clobber"], check=True)
@@ -245,27 +257,14 @@ def load_alert(alert_id):
     return zf, json.loads(zf.read("alert.json"))
 
 
-def replay_alert(alert_id, args, admin):
-    zf, alert = load_alert(alert_id)
-    rounds = build_rounds(alert)
-    # One shift for all frames keeps the gaps between them as in prod.
-    frames = [f for r in rounds for f in r]
-    first = min(f["recorded_at"] for f in frames)
-    latest_start = max(
-        min(f["recorded_at"] for f in frames if f["stream"] == s)
-        for s in {f["stream"] for f in frames}
-    )
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    # Default: the latest sequence starts 1 hour ago, so every sequence starts in the past.
-    offset = args.start - first if args.start else now - timedelta(hours=1) - latest_start
-    if args.mode == "demo" and latest_start + offset > now:
-        # The API sets last_seen_at to server time: a future started_at is out of the
-        # triangulation time window.
-        print(f"warning: alert {alert_id} has a sequence starting in the future")
+def setup_cameras(alert, streams, args, admin):
+    """Find or create the alert's cameras locally, then a fresh pose per stream.
 
+    Returns {prod camera id: local camera}, {stream: local pose id}.
+    """
     api = args.api_url
-    local_cams = {c["name"]: c["id"] for c in get(api, "/api/v1/cameras/", admin)}
-    tokens, poses = {}, {}
+    local_cams = {c["name"]: c for c in get(api, "/api/v1/cameras/", admin)}
+    cams = {}
     for prod_id, cam in alert["cameras"].items():
         name = cam["name"]
         if name not in local_cams:
@@ -274,37 +273,56 @@ def replay_alert(alert_id, args, admin):
                 f"{api}/api/v1/cameras/", headers=admin, json=payload, timeout=30
             )
             r.raise_for_status()
-            local_cams[name] = r.json()["id"]
-            print(f"created camera {name} (id {local_cams[name]})")
-        r = requests.post(
-            f"{api}/api/v1/cameras/{local_cams[name]}/token", headers=admin, timeout=30
-        )
-        r.raise_for_status()
-        tokens[int(prod_id)] = {"Authorization": f"Bearer {r.json()['access_token']}"}
+            local_cams[name] = r.json()
+            print(f"created camera {name} (id {local_cams[name]['id']})")
+        cams[int(prod_id)] = local_cams[name]
+    # Images are stored and served per organization bucket: one org per alert.
+    orgs = {c["name"]: c["organization_id"] for c in cams.values()}
+    if len(set(orgs.values())) > 1:
+        sys.exit(f"alert cameras span several organizations: {orgs}")
     # A fresh pose per stream keeps this replay apart from earlier ones.
-    for prod_cam_id, azimuth in {f["stream"] for r in rounds for f in r}:
-        name = alert["cameras"][str(prod_cam_id)]["name"]
-        payload = {"camera_id": local_cams[name], "azimuth": azimuth}
+    poses = {}
+    for prod_cam_id, azimuth in streams:
+        payload = {"camera_id": cams[prod_cam_id]["id"], "azimuth": azimuth}
         r = requests.post(
             f"{api}/api/v1/poses/", headers=admin, json=payload, timeout=30
         )
         r.raise_for_status()
         poses[(prod_cam_id, azimuth)] = r.json()["id"]
+    return cams, poses
 
-    print(f"alert {alert_id}: replaying {len(rounds)} rounds ({args.mode} mode)")
+
+def replay_live(alert_id, args, admin):
+    """Post frames through the API, timestamped now: exercises the whole pipeline."""
+    zf, alert = load_alert(alert_id)
+    rounds = build_rounds(alert)
+    cams, poses = setup_cameras(
+        alert, {f["stream"] for r in rounds for f in r}, args, admin
+    )
+    tokens = {}
+    for prod_id, cam in cams.items():
+        r = requests.post(
+            f"{args.api_url}/api/v1/cameras/{cam['id']}/token",
+            headers=admin,
+            timeout=30,
+        )
+        r.raise_for_status()
+        tokens[prod_id] = {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+    print(f"alert {alert_id}: replaying {len(rounds)} rounds (live mode)")
     failures = 0
     for i, frames in enumerate(rounds):
         for f in frames:
             data = {"bboxes": fmt_bboxes(f["boxes"]), "pose_id": poses[f["stream"]]}
-            if args.mode == "demo":
-                data["recorded_at"] = (f["recorded_at"] + offset).isoformat()
             files = [("file", ("frame.jpg", zf.read(f["image"]), "image/jpeg"))]
             # The API wants one crop per box, in the same order, or none at all.
             crops = [f["crops"].get(b) for b in f["boxes"]]
             if crops and all(crops):
-                files += [("crop", ("crop.jpg", zf.read(c), "image/jpeg")) for c in crops]
+                files += [
+                    ("crop", ("crop.jpg", zf.read(c), "image/jpeg")) for c in crops
+                ]
             r = requests.post(
-                f"{api}/api/v1/detections/",
+                f"{args.api_url}/api/v1/detections/",
                 headers=tokens[f["stream"][0]],
                 data=data,
                 files=files,
@@ -314,16 +332,151 @@ def replay_alert(alert_id, args, admin):
                 failures += 1
                 print(f"  error on {f['image']}: {r.status_code} {r.text[:200]}")
         print(f"  round {i + 1}/{len(rounds)} sent ({len(frames)} frames)")
-        if args.mode == "live" and i + 1 < len(rounds):
+        if i + 1 < len(rounds):
             time.sleep(args.interval)
     return failures
+
+
+def replay_demo(alert_id, args, admin):
+    """Copy the prod alert as is: images to the org bucket, rows straight into the DB.
+
+    No validation, triangulation nor merge runs: the alert keeps its prod sequences and
+    location, and never mixes with other replays. Tied to the pyro-api DB schema.
+    """
+    zf, alert = load_alert(alert_id)
+    seqs = alert["sequences"]
+    started = [datetime.fromisoformat(s["started_at"]) for s in seqs]
+    # One shift for all rows keeps the prod timeline. Default: the latest sequence
+    # starts 1 hour ago.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    offset = (
+        args.start - min(started)
+        if args.start
+        else now - timedelta(hours=1) - max(started)
+    )
+    streams = {(s["camera_id"], s["camera_azimuth"]) for s in seqs}
+    cams, poses = setup_cameras(alert, streams, args, admin)
+    org_id = next(iter(cams.values()))["organization_id"]
+
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=os.environ.get("S3_PROXY_URL") or "http://localhost:9000",
+        aws_access_key_id=os.environ["S3_ACCESS_KEY"],
+        aws_secret_access_key=os.environ["S3_SECRET_KEY"],
+        region_name=os.environ.get("S3_REGION"),
+    )
+    bucket = f"{os.environ['SERVER_NAME']}-alert-api-{org_id}"
+    # Keys unique to this replay: the API deletes a crop along with its detection, so
+    # replays must not share objects, and a failed replay can drop its own safely.
+    tag = uuid.uuid4().hex[:8]
+    keys = {
+        name: f"replay-{tag}-{Path(name).name}"
+        for s in seqs
+        for d in s["detections"]
+        for name in (d["image"], d.get("crop"))
+        if name
+    }
+    uploaded = []
+    try:
+        for name, key in keys.items():
+            s3.put_object(Bucket=bucket, Key=key, Body=zf.read(name))
+            uploaded.append(key)
+        alert_id_local = insert_alert(alert, cams, poses, org_id, keys, offset)
+    except BaseException:
+        for key in uploaded:
+            s3.delete_object(Bucket=bucket, Key=key)
+        raise
+    n_dets = sum(len(s["detections"]) for s in seqs)
+    print(
+        f"alert {alert_id} -> local alert {alert_id_local}: {len(seqs)} sequences, "
+        f"{n_dets} detections, {len(keys)} images and crops, "
+        f"starting {min(started) + offset} UTC"
+    )
+    return 0
+
+
+def insert_alert(alert, cams, poses, org_id, keys, offset):
+    """Write the alert, its sequences and detections in one transaction."""
+
+    def shift(ts):
+        return datetime.fromisoformat(ts) + offset
+
+    seqs = alert["sequences"]
+    dsn = (
+        f"postgresql://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}"
+        f"@localhost:5432/{os.environ['POSTGRES_DB']}"
+    )
+    with psycopg.connect(dsn) as conn:  # one transaction, rolled back on error
+        alert_id_local = conn.execute(
+            "INSERT INTO alerts (organization_id, lat, lon, started_at, last_seen_at)"
+            " VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (
+                org_id,
+                alert["lat"],
+                alert["lon"],
+                shift(alert["started_at"]),
+                shift(alert["last_seen_at"]),
+            ),
+        ).fetchone()[0]
+        for s in seqs:
+            cam_id = cams[s["camera_id"]]["id"]
+            pose_id = poses[(s["camera_id"], s["camera_azimuth"])]
+            seq_id = conn.execute(
+                # is_wildfire is left unset: the prod label came afterwards, and a
+                # labeled alert is not listed as live in the frontend.
+                "INSERT INTO sequences (camera_id, pose_id, camera_azimuth,"
+                " sequence_azimuth, cone_angle, started_at, last_seen_at, max_conf,"
+                " temporal_model_score, temporal_model_version, temporal_api_version,"
+                " is_validated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                " RETURNING id",
+                (
+                    cam_id,
+                    pose_id,
+                    s["camera_azimuth"],
+                    s["sequence_azimuth"],
+                    s["cone_angle"],
+                    shift(s["started_at"]),
+                    shift(s["last_seen_at"]),
+                    s.get("max_conf"),
+                    s.get("temporal_model_score"),
+                    s.get("temporal_model_version"),
+                    s.get("temporal_api_version"),
+                    s["is_validated"],
+                ),
+            ).fetchone()[0]
+            conn.execute(
+                "INSERT INTO alerts_sequences (alert_id, sequence_id) VALUES (%s, %s)",
+                (alert_id_local, seq_id),
+            )
+            with conn.cursor() as cur:
+                cur.executemany(
+                    "INSERT INTO detections (camera_id, pose_id, sequence_id, bucket_key,"
+                    " crop_bucket_key, bbox, others_bboxes, created_at, recorded_at)"
+                    " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    [
+                        (
+                            cam_id,
+                            pose_id,
+                            seq_id,
+                            keys[d["image"]],
+                            keys.get(d.get("crop")),
+                            d["bbox"],
+                            d["others_bboxes"],
+                            shift(d["recorded_at"]),
+                            shift(d["recorded_at"]),
+                        )
+                        for d in s["detections"]
+                    ],
+                )
+    return alert_id_local
 
 
 def replay(args):
     admin = login(
         args.api_url, os.environ["SUPERADMIN_LOGIN"], os.environ["SUPERADMIN_PWD"]
     )
-    failures = sum(replay_alert(a, args, admin) for a in args.alert_ids)
+    run = replay_demo if args.mode == "demo" else replay_live
+    failures = sum(run(a, args, admin) for a in args.alert_ids)
     if failures:
         sys.exit(f"{failures} detection uploads failed")
 
@@ -340,7 +493,9 @@ def main():
     p.add_argument("alert_ids", nargs="+", type=int)
     p.add_argument("--mode", choices=("live", "demo"), default="demo")
     p.add_argument(
-        "--start", type=utc_start, help="demo mode, first frame time, e.g. 2026-07-10T18:53"
+        "--start",
+        type=utc_start,
+        help="demo mode, first frame time, e.g. 2026-07-10T18:53",
     )
     p.add_argument("--interval", type=float, default=30, help="live mode, seconds")
     p.add_argument("--api-url", default="http://localhost:5050")

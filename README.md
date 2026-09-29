@@ -126,16 +126,31 @@ GitHub release. Needs [uv](https://docs.astral.sh/uv/) (dependencies are install
 
 ```bash
 make list-alerts                                  # alerts available in the release
-make replay-alerts ALERTS="53800 53941"           # demo mode (default)
-make replay-alerts ALERTS=53800 START=2026-07-10T18:53  # demo, first frame at a given local time
-make replay-alerts ALERTS=53800 MODE=live         # live mode
+make replay-alerts ALERTS="49767 54194"           # demo mode (default)
+make replay-alerts ALERTS=49767 START=2026-09-28T18:53  # demo, first sequence at a local time
+make replay-alerts ALERTS=49767 MODE=live         # live mode
 ```
 
-* **demo**: posts everything at once, shifted as a block (gaps between frames kept)
-  so its latest sequence starts 1 hour ago, or its first frame is at `START` (local
-  time). A sequence starting in the future does not triangulate: the API dates
-  `last_seen_at` with the server time.
-* **live**: sends one frame per camera every 30 s (`--interval`), dated now.
+Log in to the frontend as `test77` / `test` to see them.
+
+Published alerts (`make list-alerts` for the up-to-date list):
+
+| Alert | Prod date | Cameras | Detections |
+|---|---|---|---|
+| 49767 | 2026-07-10 | croix-augas-01, nemours-01, nemours-02 | 267 |
+| 54194 | 2026-09-24 | moret-sur-loing-01, croix-augas-02, nemours-01, nemours-02, videlles-01 | 488 |
+
+* **demo**: copies the prod alert as is: images and crops go to the organization
+  bucket, alert, sequences and detections are written straight into the DB, with prod
+  azimuths, cones and location. Times are shifted as a block so the latest sequence
+  starts 1 hour ago, or the first one at `START`. Nothing is recomputed, so replays
+  never mix and it takes seconds. Each replay gets its own copy of the images.
+  Sequences are left unlabeled so the alert shows as live. Tied to the pyro-api DB
+  schema.
+* **live**: posts one frame per camera every 30 s (`--interval`) through the API,
+  dated now, so validation and triangulation run locally. Replays within 2 hours of
+  each other get triangulated together when their cones cross: use a fresh stack
+  (`make stop && make run`) per alert.
 * Missing cameras are created by name in organization 2 (`--org-id`), so the
   alerts show up for the `test77` user.
 

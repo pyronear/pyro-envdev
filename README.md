@@ -113,6 +113,14 @@ docker logs engine
 
 ## 📂 Data Usage
 
+### Users Keycloak
+
+| Username | Organization_id | Password |
+|----------|-----------------|----------|
+| test77   | 2               | test     |
+| test07   | 3               | test     |
+
+
 ### Add more images to Reolink Dev
 
 Create a directory `data/images` before starting the environment and put your images inside.

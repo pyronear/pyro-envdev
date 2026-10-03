@@ -518,6 +518,9 @@
     {
       "id": "e813b152-bb4d-4b1d-8f9b-ea62554a6abe",
       "username": "test07",
+      "email": "test07@example.test",
+      "firstName": "Test",
+      "lastName": "SDIS07",
       "emailVerified": false,
       "attributes": {
         "pyro-organization": [
@@ -550,6 +553,9 @@
     {
       "id": "aa6ec0f1-bbbb-426e-b4fb-414b1c114fd1",
       "username": "test77",
+      "email": "test77@example.test",
+      "firstName": "Test",
+      "lastName": "SDIS77",
       "emailVerified": false,
       "attributes": {
         "pyro-organization": [
@@ -843,7 +849,8 @@
         "profile",
         "roles",
         "basic",
-        "email"
+        "email",
+        "pyro-organization"
       ],
       "optionalClientScopes": [
         "address",

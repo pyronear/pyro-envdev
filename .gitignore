@@ -155,3 +155,7 @@ containers/notebooks/app/.Trash-0
 
 data/alert_samples/
 data/triangulated_sequences/
+
+# day replay runtime files
+replay_control/*.json
+.replay_map.jsonl

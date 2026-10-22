@@ -1,6 +1,8 @@
 *.onnx
 *.jpg
 data/images/
+# Model cache written by the engine container (./data is mounted)
+data/models/
 *.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/

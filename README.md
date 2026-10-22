@@ -122,14 +122,13 @@ the last image being held forever. Every preset of a camera serves the same imag
 
 ```bash
 make run-engine                              # engine + camera API + fake cameras
-SCENARIO=false-positive make run-engine      # pick another scenario
+SCENARIO=never-smoke make run-engine         # pick another scenario
 make restart-engine                          # replay the scenario from the start
 ```
 
 Scenarios:
 
 * `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then a clear view
-* `false-positive`: a false positive on `nemours-02`, `croix-augas-01` stays clear
 * `never-smoke`: both cameras hold a clear view
 
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:

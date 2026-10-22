@@ -1,5 +1,5 @@
 {
-  "description": "False positive (prod alert 54194) on nemours-02: 40 frames, then a clear view. croix-augas-01 stays clear. Expected: at most one single-camera alert, no triangulation.",
+  "description": "False positive (prod alert 54194) on nemours-02: 40 frames, then a clear view. croix-augas-01 stays clear. Expect sequences on nemours-02 only (one per pose for now), none on croix-augas-01.",
   "interval": 30,
   "cameras": {
     "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},

@@ -49,6 +49,8 @@ def main():
     frames = alert_frames(args.alert, args.out.name, args.frames) if args.alert else []
     frames += [path.read_bytes() for path in args.clear]
     args.out.mkdir(parents=True, exist_ok=True)
+    for stale in args.out.glob("*.jpg"):
+        stale.unlink()
     for i, data in enumerate(frames):
         (args.out / f"{i:03d}.jpg").write_bytes(data)
     print(f"{len(frames)} frames written to {args.out}")

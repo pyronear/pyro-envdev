@@ -31,9 +31,10 @@ make build
 make run
 ```
 
-* Send an alert by opening [http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb](http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb)
-* Observe the alert on the frontend at [http://localhost:8080/](http://localhost:8080/)
-* Use credentials from `data/csv/API_DATA_DEV/users.csv`
+* Send realistic alerts by running the notebook [http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb](http://0.0.0.0:8889/notebooks/notebooks/send_real_alerts.ipynb)
+  (one cell per scenario: a fire seen by three towers, a fire seen by a single camera, etc.)
+* Observe the alerts on the frontend at [http://localhost:8080/](http://localhost:8080/)
+* Use credentials from `data/csv/API_DATA_DEV - users.csv` (`test77` / `test` or `test07` / `test`)
 * Or check directly on the API at [http://0.0.0.0:5050/docs](http://0.0.0.0:5050/docs) with the same creds
 
 ---
@@ -117,13 +118,20 @@ docker logs engine
 
 Create a directory `data/images` before starting the environment and put your images inside.
 
-### Send custom alerts
+### Send alerts
 
-Use Jupyter notebooks (e.g., `notebooks/send_real_alerts.ipynb`).
-When running notebooks **inside Docker**, set:
+The notebook `send_real_alerts.ipynb` replays real wildfire footage with the camera that
+recorded it, so images, camera names and the map agree. Its last section shows how to send
+your own sequence folder with `send_sequences`. The same scenarios can be sent from a shell:
 
-```python
-API_URL = "http://api:5050"
+```bash
+docker exec -w /app/notebooks pyro-envdev-notebooks-1 python scenarios.py            # all scenarios
+docker exec -w /app/notebooks pyro-envdev-notebooks-1 python scenarios.py triangulated-fire-77
+docker exec -w /app/notebooks pyro-envdev-notebooks-1 python scenarios.py --delete-all-alerts  # start over
+```
+
+The *Alerts* page only shows today's alerts: send the scenarios again on another day.
+When writing your own notebooks **inside Docker**, use `API_URL = "http://api:5050"`.
 
 ### Update the last image for a camera
 

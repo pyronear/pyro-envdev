@@ -1,0 +1,8 @@
+{
+  "description": "Real wildfire (prod alert 49767) seen by two cameras: 40 frames of smoke, then a clear view held forever. Expected: one alert with two sequences, triangulated near 48.498, 2.946.",
+  "interval": 30,
+  "cameras": {
+    "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},
+    "nemours-02": {"poses": {"0": 245.9, "1": 292.4, "2": 339.4, "3": 25.4}}
+  }
+}

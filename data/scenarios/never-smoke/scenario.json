@@ -1,0 +1,8 @@
+{
+  "description": "Both cameras hold a clear view. Expected: no alert.",
+  "interval": 30,
+  "cameras": {
+    "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},
+    "nemours-02": {"poses": {"0": 245.9, "1": 292.4, "2": 339.4, "3": 25.4}}
+  }
+}

@@ -163,9 +163,11 @@ and attach the zip to the `scenarios` release. `scenario.json` itself is committ
 
 ### Fake alerts on a remote API (preprod)
 
-`fakecam-1` can impersonate a camera of a remote alert API, so the real engine sends
-alerts there. `data/credentials-preprod.template.json` describes that camera
-(`st-peray-01` on preprod: `id` 18, `pose_ids` [105], static). Set `DISTANT_API_URL`,
+The fake cameras can play as cameras of a remote alert API, so the real engine sends
+alerts there. `data/credentials-preprod.template.json` describes them: on preprod,
+organization `fake-cam`, static cameras `fake-cam-01` (`id` 41, pose 167) and
+`fake-cam-02` (`id` 42, pose 168), placed where the scenario frames were shot so the
+alert location makes sense. Set `DISTANT_API_URL`,
 `DISTANT_ALERT_API_LOGIN` and `DISTANT_ALERT_API_PASSWORD` (an admin account) in `.env`,
 then:
 

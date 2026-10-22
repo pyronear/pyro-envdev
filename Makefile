@@ -77,13 +77,14 @@ run-camera: fetch-scenario
 run-engine: fetch-scenario
 	docker compose --profile engine up -d
 
-# Fake alerts on a remote alert API: fakecam-1 impersonates the camera of
-# data/credentials-preprod.json, replaying the scenario in a loop. Tokens come
-# from DISTANT_API_URL / DISTANT_ALERT_API_LOGIN / DISTANT_ALERT_API_PASSWORD
-# in .env (an admin account). The local stack is not started.
+# Fake alerts on a remote alert API: the fake cameras play the scenario in a
+# loop as the cameras of data/credentials-preprod.template.json (org fake-cam
+# on preprod). Tokens come from DISTANT_API_URL / DISTANT_ALERT_API_LOGIN /
+# DISTANT_ALERT_API_PASSWORD in .env (an admin account). The local stack is
+# not started.
 run-engine-preprod: fetch-scenario
 	python3 scripts/preprod_credentials.py data/credentials-preprod.template.json data/credentials-preprod.json
-	LOOP=true docker compose up -d --wait fakecam-1
+	LOOP=true docker compose up -d --wait fakecam-1 fakecam-2
 	ENGINE_API_URL=$$(grep '^DISTANT_API_URL=' .env | cut -d= -f2- | tr -d "'\"") \
 		CREDENTIALS_FILE=credentials-preprod.json \
 		docker compose --profile engine up -d --no-deps pyro_camera_api engine

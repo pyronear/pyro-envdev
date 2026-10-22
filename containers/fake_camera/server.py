@@ -27,11 +27,14 @@ NO_PAN_OPS = {"ToPos", "Stop", "ZoomInc", "ZoomDec", "FocusInc", "FocusDec"}
 
 CAM_USER = os.environ.get("CAM_USER", "")
 CAM_PWD = os.environ.get("CAM_PWD", "")
+# Replay the scenario from the start once the last frame is reached.
+LOOP = os.environ.get("LOOP", "false").lower() in ("1", "true", "yes")
 
 
-def frame_index(elapsed, interval, n_frames):
-    """Frame served `elapsed` seconds after the first Snap, last one held."""
-    return min(n_frames - 1, int(elapsed // interval))
+def frame_index(elapsed, interval, n_frames, loop=False):
+    """Frame served `elapsed` seconds after the first Snap: last one held, or looped."""
+    index = int(elapsed // interval)
+    return index % n_frames if loop else min(n_frames - 1, index)
 
 
 def reply(cmd, value=None, error=None):
@@ -67,7 +70,7 @@ class Camera:
         return 0.0 if self.started is None else time.monotonic() - self.started
 
     def _frame(self):
-        return frame_index(self._elapsed(), self.interval, len(self.frames))
+        return frame_index(self._elapsed(), self.interval, len(self.frames), LOOP)
 
     def snap(self):
         with self.lock:
@@ -84,7 +87,9 @@ class Camera:
                 "elapsed": round(self._elapsed(), 1),
                 "frame": self._frame(),
                 "frames": len(self.frames),
-                "finished": self.started is not None
+                "loop": LOOP,
+                "finished": not LOOP
+                and self.started is not None
                 and self._frame() == len(self.frames) - 1,
             }
 
@@ -219,10 +224,11 @@ def main():
     httpd = ThreadingHTTPServer(("", port), Handler)
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     logging.info(
-        "fake camera %s plays scenario %s: "
+        "fake camera %s plays scenario %s%s: "
         "%d frames, one every %ss, presets %s, port %d",
         camera.name,
         scenario,
+        " in a loop" if LOOP else "",
         len(camera.frames),
         camera.interval,
         sorted(camera.enabled),

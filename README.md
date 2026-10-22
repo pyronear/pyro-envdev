@@ -161,6 +161,23 @@ python scripts/make_scenario.py data/scenarios/<name>/croix-augas-01 \
 Then zip the images (`cd data/scenarios && zip -r <name>.zip <name> -x '*/scenario.json'`)
 and attach the zip to the `scenarios` release. `scenario.json` itself is committed.
 
+### Fake alerts on a remote API (preprod)
+
+`fakecam-1` can impersonate a camera of a remote alert API, so the real engine sends
+alerts there. `data/credentials-preprod.json` describes that camera (`st-peray-01` on
+preprod: `id` 18, `pose_ids` [105], static). Set `DISTANT_API_URL`,
+`DISTANT_ALERT_API_LOGIN` and `DISTANT_ALERT_API_PASSWORD` (an admin account) in `.env`,
+then:
+
+```bash
+make run-engine-preprod     # fetches the camera token, replays the scenario in a loop
+make stop-engine            # stop sending
+```
+
+The local API is not started. The token is written into `data/credentials-preprod.json`,
+do not commit it. `PYRO_ENGINE_VERSION=<tag>` picks another engine image, `LOOP=true`
+also works with `make run-engine`.
+
 ### Working on pyro-engine without a camera
 
 Start only the fake cameras:

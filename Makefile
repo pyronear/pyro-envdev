@@ -10,6 +10,7 @@ help:
 	@echo "  fetch-scenario      Download scenario images (SCENARIO=smoke-then-clear)"
 	@echo "  run-backend         Start base services only"
 	@echo "  run-camera          Start only the fake cameras, to work on pyro-engine"
+	@echo "  run-engine-preprod  Fake alerts on the remote API of .env (DISTANT_API_URL)"
 	@echo "  run-engine          Start base services plus engine profile"
 	@echo "  run-tools-and-engine  Start base services plus tools and engine profiles"
 	@echo "  run-tools           Start base services plus tools profile"
@@ -74,6 +75,17 @@ run-camera: fetch-scenario
 # Engine profile adds engine + pyro_camera_api + fake cameras
 run-engine: fetch-scenario
 	docker compose --profile engine up -d
+
+# Fake alerts on a remote alert API: fakecam-1 impersonates the camera of
+# data/credentials-preprod.json, replaying the scenario in a loop. Tokens come
+# from DISTANT_API_URL / DISTANT_ALERT_API_LOGIN / DISTANT_ALERT_API_PASSWORD
+# in .env (an admin account). The local stack is not started.
+run-engine-preprod: fetch-scenario
+	python3 scripts/preprod_credentials.py data/credentials-preprod.json
+	LOOP=true docker compose up -d --wait fakecam-1
+	ENGINE_API_URL=$$(grep '^DISTANT_API_URL=' .env | cut -d= -f2- | tr -d "'\"") \
+		CREDENTIALS_FILE=credentials-preprod.json \
+		docker compose --profile engine up -d --no-deps pyro_camera_api engine
 
 # Tools + engine (tools must be up first so the API is ready when engine starts)
 run-tools-and-engine:

@@ -49,6 +49,14 @@ cameras = pd.read_csv(f"data/csv/API_DATA{sub_path} - cameras.csv")
 cameras = cameras.fillna("")
 poses = pd.read_csv(f"data/csv/API_DATA{sub_path} - poses.csv")
 
+# `docker compose up` re-runs this one-shot container: skip when the data is
+# already there, so services waiting on it (service_completed_successfully)
+# still start.
+existing_orgs = api_request("get", f"{api_url}/organizations/", superuser_auth)
+if set(organizations.name) <= {org["name"] for org in existing_orgs}:
+    logging.info("Organizations already exist, nothing to do")
+    sys.exit(0)
+
 # ============================================================================
 # ORGAS CREATION
 # ============================================================================

@@ -120,7 +120,7 @@ services:
     volumes:
       - ./data:/usr/src/app/data
       # The camera API reads this exact path: swap the file to target another API.
-      - ./data/${CREDENTIALS_FILE:-credentials.json}:/usr/src/app/data/credentials.json
+      - ./data/${CREDENTIALS_FILE:-credentials.json}:/usr/src/app/data/credentials.json:ro
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:

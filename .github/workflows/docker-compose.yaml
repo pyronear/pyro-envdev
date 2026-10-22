@@ -25,6 +25,9 @@ jobs:
     - name: Run docker-compose up -d
       run: make run
 
+    - name: Start the fake cameras
+      run: make run-camera
+
       # Wait for containers to start up (adjust the sleep time as needed)
     - name: Wait for containers to start
       run: sleep 120

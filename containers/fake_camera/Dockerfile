@@ -10,6 +10,7 @@ COPY server.py .
 
 # Default scenario, so the image runs alone (e.g. on a Pi); a volume on /scenarios overrides it.
 # Build with: docker build --build-context scenarios=data/scenarios ... (see Makefile)
+# hadolint ignore=DL3022
 COPY --from=scenarios smoke-then-clear /scenarios/smoke-then-clear
 
 EXPOSE 443

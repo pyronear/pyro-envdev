@@ -51,8 +51,8 @@ def main():
         with urllib.request.urlopen(request, timeout=10) as resp:
             camera["token"] = json.load(resp)["access_token"]
         print(f"{key}: token written for camera {camera['id']} ({camera['name']})")
-    output.touch(mode=0o600)
     output.write_text(json.dumps(cameras, indent=4) + "\n")
+    output.chmod(0o600)  # holds a camera token; touch() would keep wider existing modes
 
 
 if __name__ == "__main__":

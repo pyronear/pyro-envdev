@@ -54,8 +54,11 @@ poses = pd.read_csv(f"data/csv/API_DATA{sub_path} - poses.csv")
 # still start.
 existing_orgs = api_request("get", f"{api_url}/organizations/", superuser_auth)
 if set(organizations.name) <= {org["name"] for org in existing_orgs}:
-    logging.info("Organizations already exist, nothing to do")
-    sys.exit(0)
+    if all(cam["token"] for cam in read_json_file(credentials_path).values()):
+        logging.info("Organizations and camera tokens already exist, nothing to do")
+        sys.exit(0)
+    logging.warning("Database already initialized but camera tokens are missing")
+    logging.warning("Run `make stop` to start from a fresh database")
 
 # ============================================================================
 # ORGAS CREATION

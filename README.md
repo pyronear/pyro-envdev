@@ -128,7 +128,7 @@ make restart-engine                          # replay the scenario from the star
 
 Scenarios:
 
-* `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then a clear view
+* `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then 8 clear frames
 * `never-smoke`: both cameras hold a clear view
 
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
@@ -164,8 +164,8 @@ and attach the zip to the `scenarios` release. `scenario.json` itself is committ
 ### Fake alerts on a remote API (preprod)
 
 `fakecam-1` can impersonate a camera of a remote alert API, so the real engine sends
-alerts there. `data/credentials-preprod.json` describes that camera (`st-peray-01` on
-preprod: `id` 18, `pose_ids` [105], static). Set `DISTANT_API_URL`,
+alerts there. `data/credentials-preprod.template.json` describes that camera
+(`st-peray-01` on preprod: `id` 18, `pose_ids` [105], static). Set `DISTANT_API_URL`,
 `DISTANT_ALERT_API_LOGIN` and `DISTANT_ALERT_API_PASSWORD` (an admin account) in `.env`,
 then:
 
@@ -174,9 +174,10 @@ make run-engine-preprod     # fetches the camera token, replays the scenario in 
 make stop-engine            # stop sending
 ```
 
-The local API is not started. The token is written into `data/credentials-preprod.json`,
-do not commit it. `PYRO_ENGINE_VERSION=<tag>` picks another engine image, `LOOP=true`
-also works with `make run-engine`.
+The local API is not started. The token goes to `data/credentials-preprod.json`, which is
+gitignored. `PYRO_ENGINE_VERSION=<tag>` picks another engine image, `LOOP=true` also works
+with `make run-engine`. The image embeds `smoke-then-clear`, so it also runs alone on the
+test station (see pi-manager-template).
 
 ### Working on pyro-engine without a camera
 
@@ -187,11 +188,12 @@ make run-camera
 ```
 
 They are published on `https://localhost:8443` and `https://localhost:8444`. In your
-pyro-engine checkout, point `credentials.json` at them with the host and port as key:
+pyro-engine checkout, point `credentials.json` at them with the host and port as key
+(`127.0.0.1`, the ports are published on IPv4 only):
 
 ```json
 {
-  "localhost:8443": {"name": "croix-augas-01", "adapter": "reolink", "type": "ptz", "poses": [1, 2, 3], ...}
+  "127.0.0.1:8443": {"name": "croix-augas-01", "adapter": "reolink", "type": "ptz", "poses": [1, 2, 3], ...}
 }
 ```
 

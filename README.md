@@ -158,8 +158,8 @@ python scripts/make_scenario.py data/scenarios/<name>/croix-augas-01 \
     --alert data/replay_alerts/alert_49767.zip --frames 40 --clear clear.jpg
 ```
 
-Then zip the scenario folder (`cd data/scenarios && zip -r <name>.zip <name>`) and attach
-it to the `scenarios` release.
+Then zip the images (`cd data/scenarios && zip -r <name>.zip <name> -x '*/scenario.json'`)
+and attach the zip to the `scenarios` release. `scenario.json` itself is committed.
 
 ### Working on pyro-engine without a camera
 

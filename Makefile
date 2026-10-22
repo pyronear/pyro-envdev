@@ -65,7 +65,7 @@ SCENARIOS_URL = https://github.com/pyronear/pyro-envdev/releases/download/scenar
 fetch-scenario:
 	@test -n "$$(ls data/scenarios/$(SCENARIO)/*/*.jpg 2>/dev/null)" || \
 		(curl -fsSL $(SCENARIOS_URL)/$(SCENARIO).zip -o /tmp/$(SCENARIO).zip && \
-		unzip -oq /tmp/$(SCENARIO).zip -d data/scenarios && rm /tmp/$(SCENARIO).zip)
+		unzip -oq /tmp/$(SCENARIO).zip -x '*/scenario.json' -d data/scenarios && rm /tmp/$(SCENARIO).zip)
 
 # Fake cameras alone, for a pyro-engine running outside compose (see README)
 run-camera: fetch-scenario

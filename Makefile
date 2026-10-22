@@ -7,15 +7,17 @@ help:
 	@echo "  build               Build local images in this repo"
 	@echo "  build-external      Build images in sibling repos"
 	@echo "  build-all           Build local and external images"
+	@echo "  fetch-scenario      Download scenario images (SCENARIO=smoke-then-clear)"
 	@echo "  run-backend         Start base services only"
+	@echo "  run-camera          Start only the fake cameras, to work on pyro-engine"
 	@echo "  run-engine          Start base services plus engine profile"
 	@echo "  run-tools-and-engine  Start base services plus tools and engine profiles"
 	@echo "  run-tools           Start base services plus tools profile"
 	@echo "  run                 Start base services plus front and tools profiles"
 	@echo "  run-temporal        Same as run (front + tools) plus temporal model API"
 	@echo "  stop-temporal       Stop only the temporal model API"
-	@echo "  stop-engine         Stop only engine services (engine + pyro_camera_api)"
-	@echo "  restart-engine      Restart engine services without re-running init_script"
+	@echo "  stop-engine         Stop only engine services (engine, pyro_camera_api, fake cameras)"
+	@echo "  restart-engine      Restart engine services and replay the scenario from the start"
 	@echo "  stop                Stop and remove all services and volumes"
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
@@ -35,6 +37,7 @@ init:
 build:
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
 	docker build -f containers/notebooks/Dockerfile -t pyronear/notebooks:latest containers/notebooks/
+	docker build -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:latest containers/fake_camera/
 
 # -------------------------------------------------------------------
 # Build images from sibling repositories
@@ -55,8 +58,21 @@ build-all: build build-external
 run-backend:
 	docker compose up -d
 
-# Engine profile adds engine + pyro_camera_api
-run-engine:
+# Fake camera scenarios: definitions are in data/scenarios/<name>/scenario.json,
+# images come from the "scenarios" GitHub release.
+SCENARIO ?= smoke-then-clear
+SCENARIOS_URL = https://github.com/pyronear/pyro-envdev/releases/download/scenarios
+fetch-scenario:
+	@test -n "$$(ls data/scenarios/$(SCENARIO)/*/*.jpg 2>/dev/null)" || \
+		(curl -fsSL $(SCENARIOS_URL)/$(SCENARIO).zip -o /tmp/$(SCENARIO).zip && \
+		unzip -oq /tmp/$(SCENARIO).zip -d data/scenarios && rm /tmp/$(SCENARIO).zip)
+
+# Fake cameras alone, for a pyro-engine running outside compose (see README)
+run-camera: fetch-scenario
+	docker compose up -d fakecam-1 fakecam-2
+
+# Engine profile adds engine + pyro_camera_api + fake cameras
+run-engine: fetch-scenario
 	docker compose --profile engine up -d
 
 # Tools + engine (tools must be up first so the API is ready when engine starts)
@@ -84,13 +100,13 @@ stop-temporal:
 	docker compose --profile temporal stop temporal_model_api
 
 stop-engine:
-	docker compose --profile engine stop engine pyro_camera_api
+	docker compose --profile engine stop engine pyro_camera_api fakecam-1 fakecam-2
 
 restart-engine: stop-engine
-	docker compose --profile engine up -d engine pyro_camera_api --no-deps
+	docker compose --profile engine up -d fakecam-1 fakecam-2 pyro_camera_api engine --no-deps
 
 stop:
-	docker compose --profile front --profile engine --profile tools --profile temporal down -v
+	docker compose --profile front --profile engine --profile camera --profile tools --profile temporal down -v
 
 ps:
 	docker compose ps

@@ -108,6 +108,8 @@ services:
     profiles:
       - engine
     environment:
+      # Pose azimuths are fetched from the platform API.
+      - API_URL=http://pyro_api:5050
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
       - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}

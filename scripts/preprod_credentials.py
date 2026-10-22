@@ -1,6 +1,7 @@
 """Fill the camera tokens of a credentials file from a remote alert API.
 
-    python scripts/preprod_credentials.py data/credentials-preprod.template.json data/credentials-preprod.json
+    python scripts/preprod_credentials.py \\
+        data/credentials-preprod.template.json data/credentials-preprod.json
 
 Logs in with DISTANT_API_URL, DISTANT_ALERT_API_LOGIN and
 DISTANT_ALERT_API_PASSWORD from .env (an admin account), asks a token for the

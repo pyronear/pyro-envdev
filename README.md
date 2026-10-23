@@ -134,6 +134,10 @@ Scenarios:
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
 current preset and azimuth, frame index and `finished` once the last frame is shown.
 
+The image `pyronear/fake-camera` is published by the `fake-camera-image` workflow: `latest`
+on every change to `containers/fake_camera/` on `main`, and `X.Y.Z` on a `fake-camera-vX.Y.Z`
+tag (used by pi-manager-template). It needs the `DOCKERHUB_LOGIN` / `DOCKERHUB_PW` secrets.
+
 ### Scenario format
 
 `data/scenarios/<name>/scenario.json` describes the scenario (committed), the images

@@ -115,6 +115,9 @@ services:
       - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}
       # Fake cameras serve the same frames on every preset, which the detector reads as a stuck camera.
       - ENABLE_STUCK_DETECTOR=false
+    # Lets MEDIAMTX_SERVER_IP=host.docker.internal reach a MediaMTX running on the host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/usr/src/app/data
     ports:

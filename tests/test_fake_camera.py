@@ -39,6 +39,7 @@ def test_frame_index():
     assert frame_index(0, 30, 3) == 0
     assert frame_index(59.9, 30, 3) == 1
     assert frame_index(600, 30, 3) == 2  # last frame held
+    assert frame_index(90, 30, 3, loop=True) == 0  # starts again
 
 
 def test_snap_returns_a_jpeg():

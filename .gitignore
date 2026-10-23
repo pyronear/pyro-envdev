@@ -3,6 +3,8 @@
 data/images/
 # Model cache written by the engine container (./data is mounted)
 data/models/
+# Written by init_script at the end of a successful run
+data/.init_done
 *.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/

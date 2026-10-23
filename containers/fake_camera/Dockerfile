@@ -8,8 +8,8 @@ RUN openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=fakecam" \
 
 COPY server.py .
 
-# Default scenario, so the image runs alone (e.g. on a Pi); a volume on /scenarios overrides it.
-# Build with: docker build --build-context scenarios=data/scenarios ... (see Makefile)
+# Default scenario, so the image runs alone (e.g. on a test station); a volume on
+# /scenarios overrides it. Built with --build-context scenarios=data/scenarios (Makefile).
 # hadolint ignore=DL3022
 COPY --from=scenarios smoke-then-clear /scenarios/smoke-then-clear
 

@@ -134,6 +134,13 @@ Scenarios:
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
 current preset and azimuth, frame index and `finished` once the last frame is shown.
 
+The image embeds `smoke-then-clear`, so it also runs alone, without the `data/scenarios`
+volume (used by pi-manager-template on a test station).
+
+The image `pyronear/fake-camera` is published by the `fake-camera-image` workflow: `latest`
+on every change to `containers/fake_camera/` on `main`, and `X.Y.Z` on a `fake-camera-vX.Y.Z`
+tag (used by pi-manager-template). It needs the `DOCKERHUB_LOGIN` / `DOCKERHUB_PW` secrets.
+
 ### Scenario format
 
 `data/scenarios/<name>/scenario.json` describes the scenario (committed), the images
@@ -178,8 +185,7 @@ make stop-engine            # stop sending
 
 The local API is not started. The token goes to `data/credentials-preprod.json`, which is
 gitignored. `PYRO_ENGINE_VERSION=<tag>` picks another engine image, `LOOP=true` also works
-with `make run-engine`. The image embeds `smoke-then-clear`, so it also runs alone on the
-test station (see pi-manager-template).
+with `make run-engine`.
 
 ### Working on pyro-engine without a camera
 

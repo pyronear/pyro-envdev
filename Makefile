@@ -64,8 +64,10 @@ run-backend:
 # images come from the "scenarios" GitHub release.
 SCENARIO ?= smoke-then-clear
 SCENARIOS_URL = https://github.com/pyronear/pyro-envdev/releases/download/scenarios
+# Downloads unless every camera of scenario.json already has frames.
 fetch-scenario:
-	@test -n "$$(ls data/scenarios/$(SCENARIO)/*/*.jpg 2>/dev/null)" || \
+	@python3 -c "import glob, json, sys; d = 'data/scenarios/$(SCENARIO)'; \
+		sys.exit(any(not glob.glob(f'{d}/{c}/*.jpg') for c in json.load(open(f'{d}/scenario.json'))['cameras']))" || \
 		(curl -fsSL $(SCENARIOS_URL)/$(SCENARIO).zip -o /tmp/$(SCENARIO).zip && \
 		unzip -oq /tmp/$(SCENARIO).zip -x '*/scenario.json' -d data/scenarios && rm /tmp/$(SCENARIO).zip)
 

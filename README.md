@@ -44,8 +44,8 @@ make run
 * **db**: PostgreSQL database
 * **rustfs**: S3-compatible storage (via RustFS)
 * **frontend**: Web app (React, [pyro-platform](https://github.com/pyronear/pyro-platform))
-* **pyro-engine**: Engine service (requires cameras, optional)
-* **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
+* **pyro_camera_api / engine**: the real camera API and engine from [pyro-engine](https://github.com/pyronear/pyro-engine) (optional)
+* **fakecam-1 / fakecam-2**: fake Reolink cameras playing a scenario (see below)
 * **notebooks**: Jupyter server to run helper notebooks
 * **db-ui**: pgAdmin to browse/manage the database
 
@@ -60,12 +60,12 @@ make build
 make run-all
 ```
 
-This launches everything including the engine and simulated alerts.
-You can check health with:
+This launches everything, including the engine and the fake cameras playing the
+`smoke-then-clear` scenario. You can check health with:
 
 ```bash
 docker logs init
-docker logs engine
+docker compose logs -f engine
 ```
 
 ### Partial runs
@@ -108,6 +108,84 @@ docker logs engine
 * **RustFS S3 API**: `rustfs:9000` from the compose network (`S3_ENDPOINT_URL`),
   [http://localhost:9000](http://localhost:9000) from the host (`S3_PROXY_URL`, used
   for presigned image URLs)
+
+---
+
+## 📷 Fake cameras and scenarios
+
+`fakecam-1` (`croix-augas-01`) and `fakecam-2` (`nemours-02`) answer the Reolink HTTP
+API (`/cgi-bin/api.cgi?cmd=Snap|PtzCtrl|GetPtzPreset|...`) over HTTPS with a self-signed
+certificate, so the real `pyro_camera_api` and `engine` run against them unchanged
+(`data/credentials.json`, adapter `reolink`). Each one plays a scenario: a list of
+images shown one after the other, one every `interval` seconds from the first `Snap`,
+the last image being held forever. Every preset of a camera serves the same images for now.
+
+```bash
+make run-engine                              # engine + camera API + fake cameras
+SCENARIO=never-smoke make run-engine         # pick another scenario
+make restart-engine                          # replay the scenario from the start
+```
+
+Scenarios:
+
+* `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then a clear view
+* `never-smoke`: both cameras hold a clear view
+
+`GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
+current preset and azimuth, frame index and `finished` once the last frame is shown.
+
+The image embeds `smoke-then-clear`, so it also runs alone, without the `data/scenarios`
+volume (used by pi-manager-template on a test station).
+
+The image `pyronear/fake-camera` is published by the `fake-camera-image` workflow: `latest`
+on every change to `containers/fake_camera/` on `main`, and `X.Y.Z` on a `fake-camera-vX.Y.Z`
+tag (used by pi-manager-template). It needs the `DOCKERHUB_LOGIN` / `DOCKERHUB_PW` secrets.
+
+### Scenario format
+
+`data/scenarios/<name>/scenario.json` describes the scenario (committed), the images
+live next to it and are downloaded by `make fetch-scenario SCENARIO=<name>` from the
+[`scenarios` release](https://github.com/pyronear/pyro-envdev/releases/tag/scenarios):
+
+```
+data/scenarios/smoke-then-clear/
+  scenario.json          # {"interval": 30, "cameras": {"<name>": {"poses": {"<preset>": <azimuth>}}}}
+  croix-augas-01/        # frames of fakecam-1, in order: 000.jpg, 001.jpg, ...
+  nemours-02/            # frames of fakecam-2
+```
+
+Camera names and presets match `data/csv/API_DATA_DEV - cameras.csv` / `poses.csv`, so
+the init script gives each fake camera its token and the engine finds its poses.
+
+To build the frames of a camera from a replayed alert zip (see `make fetch-alerts`) and
+a clear image for the end of the scenario:
+
+```bash
+python scripts/make_scenario.py data/scenarios/<name>/croix-augas-01 \
+    --alert data/replay_alerts/alert_49767.zip --frames 40 --clear clear.jpg
+```
+
+Then zip the images (`cd data/scenarios && zip -r <name>.zip <name> -x '*/scenario.json'`)
+and attach the zip to the `scenarios` release. `scenario.json` itself is committed.
+
+### Working on pyro-engine without a camera
+
+Start only the fake cameras:
+
+```bash
+make run-camera
+```
+
+They are published on `https://localhost:8443` and `https://localhost:8444`. In your
+pyro-engine checkout, point `credentials.json` at them with the host and port as key:
+
+```json
+{
+  "localhost:8443": {"name": "croix-augas-01", "adapter": "reolink", "type": "ptz", "poses": [1, 2, 3], ...}
+}
+```
+
+and use the same `CAM_USER` / `CAM_PWD` as in this repo's `.env`.
 
 ---
 

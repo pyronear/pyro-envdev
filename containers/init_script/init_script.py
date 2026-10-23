@@ -49,6 +49,24 @@ cameras = pd.read_csv(f"data/csv/API_DATA{sub_path} - cameras.csv")
 cameras = cameras.fillna("")
 poses = pd.read_csv(f"data/csv/API_DATA{sub_path} - poses.csv")
 
+# `docker compose up` re-runs this one-shot container: skip when a previous
+# run completed on this database, so services waiting on it
+# (service_completed_successfully) still start. The marker alone is not
+# enough: `make stop` drops the database but keeps data/ on the host.
+done_marker = "data/.init_done"
+existing_orgs = api_request("get", f"{api_url}/organizations/", superuser_auth)
+if set(organizations.name) <= {org["name"] for org in existing_orgs}:
+    tokens_present = all(
+        cam["token"] for cam in read_json_file(credentials_path).values()
+    )
+    if os.path.exists(done_marker) and tokens_present:
+        logging.info("Database already initialized, nothing to do")
+        sys.exit(0)
+    logging.warning("Database already initialized but the last init did not complete")
+    logging.warning("Run `make stop` to start from a fresh database")
+if os.path.exists(done_marker):
+    os.remove(done_marker)
+
 # ============================================================================
 # ORGAS CREATION
 # ============================================================================
@@ -264,6 +282,8 @@ else:
     logging.info("All camera and pose updates completed")
 
 logging.info("Initialization script completed successfully")
+with open(done_marker, "w") as marker:
+    marker.write("ok\n")
 
 # Load environment variables from .env file
 # load_dotenv()

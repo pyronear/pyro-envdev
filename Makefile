@@ -34,10 +34,11 @@ init:
 # Build images in this repo
 # -------------------------------------------------------------------
 
-build:
+# The fake camera image embeds the default scenario, fetched first.
+build: fetch-scenario
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
 	docker build -f containers/notebooks/Dockerfile -t pyronear/notebooks:latest containers/notebooks/
-	docker build -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:latest containers/fake_camera/
+	docker build --build-context scenarios=data/scenarios -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:latest containers/fake_camera/
 
 # -------------------------------------------------------------------
 # Build images from sibling repositories

@@ -188,6 +188,8 @@ services:
       - db
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.3
+    profiles:
+      - tools
     ports:
       - "9310:9310"
     environment:

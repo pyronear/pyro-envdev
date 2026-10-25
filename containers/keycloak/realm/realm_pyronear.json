@@ -48,18 +48,18 @@
   "roles": {
     "realm": [
       {
-        "id": "c07219b0-6974-41fa-9bf9-aeabecb48b55",
-        "name": "F001_LIVESTREAMING",
-        "description": "",
+        "id": "41d24c2a-e3b6-483a-a246-448e02df6c13",
+        "name": "operator",
+        "description": "View and modify data, take control on cameras",
         "composite": false,
         "clientRole": false,
         "containerId": "8b67118b-e1a4-4455-9e6f-dca138172d4c",
         "attributes": {}
       },
       {
-        "id": "2d7d25c0-ea1a-4d4f-8857-d63959096d23",
-        "name": "F002_OCCLUSION_MASK",
-        "description": "",
+        "id": "636ea0f9-9fc9-4aef-bf53-07ad2ee09834",
+        "name": "viewer",
+        "description": "View data",
         "composite": false,
         "clientRole": false,
         "containerId": "8b67118b-e1a4-4455-9e6f-dca138172d4c",
@@ -91,6 +91,15 @@
             ]
           }
         },
+        "clientRole": false,
+        "containerId": "8b67118b-e1a4-4455-9e6f-dca138172d4c",
+        "attributes": {}
+      },
+      {
+        "id": "a4a82f73-9ac4-4ed1-809e-963f0f2b1ae2",
+        "name": "admin",
+        "description": "",
+        "composite": false,
         "clientRole": false,
         "containerId": "8b67118b-e1a4-4455-9e6f-dca138172d4c",
         "attributes": {}
@@ -423,44 +432,7 @@
       "new-pyro-platform": []
     }
   },
-  "groups": [
-    {
-      "id": "ce064fb2-4b2b-49b3-9b6f-568317ac347a",
-      "name": "admin",
-      "description": "",
-      "path": "/admin",
-      "subGroups": [],
-      "attributes": {},
-      "realmRoles": [
-        "F001_LIVESTREAMING",
-        "F002_OCCLUSION_MASK"
-      ],
-      "clientRoles": {}
-    },
-    {
-      "id": "c792e75b-3c07-423c-899b-ac9c9108ad7f",
-      "name": "agent",
-      "description": "",
-      "path": "/agent",
-      "subGroups": [],
-      "attributes": {},
-      "realmRoles": [
-        "F001_LIVESTREAMING",
-        "F002_OCCLUSION_MASK"
-      ],
-      "clientRoles": {}
-    },
-    {
-      "id": "147bb0f0-7dc0-461c-aafd-2e1eb6778e9b",
-      "name": "user",
-      "description": "",
-      "path": "/user",
-      "subGroups": [],
-      "attributes": {},
-      "realmRoles": [      ],
-      "clientRoles": {}
-    }
-  ],
+  "groups": [],
   "defaultRole": {
     "id": "0f490bc4-4481-4db0-92fe-0eb70ccd1f36",
     "name": "default-roles-pyronear",
@@ -518,7 +490,10 @@
     {
       "id": "e813b152-bb4d-4b1d-8f9b-ea62554a6abe",
       "username": "test07",
-      "emailVerified": false,
+      "emailVerified": true,
+      "firstName": "User07",
+      "lastName": "Name",
+      "email": "user07@mail.com",
       "attributes": {
         "pyro-organization": [
           "3"
@@ -540,17 +515,19 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-pyronear"
+        "default-roles-pyronear",
+        "operator"
       ],
       "notBefore": 0,
-      "groups": [
-        "/agent"
-      ]
+      "groups": []
     },
     {
       "id": "aa6ec0f1-bbbb-426e-b4fb-414b1c114fd1",
       "username": "test77",
-      "emailVerified": false,
+      "emailVerified": true,
+      "firstName": "User77",
+      "lastName": "Name",
+      "email": "user77@mail.com",
       "attributes": {
         "pyro-organization": [
           "2"
@@ -572,12 +549,45 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
-        "default-roles-pyronear"
+        "default-roles-pyronear",
+        "operator"
       ],
       "notBefore": 0,
-      "groups": [
-        "/agent"
-      ]
+      "groups": []
+    },
+    {
+      "id": "564a1fd4-a04b-4eae-a2ba-b28d0f27c74f",
+      "username": "test07-viewer",
+      "emailVerified": true,
+      "firstName": "User07",
+      "lastName": "Name",
+      "email": "user07viewer@mail.com",
+      "attributes": {
+        "pyro-organization": [
+          "3"
+        ]
+      },
+      "enabled": true,
+      "createdTimestamp": 1770670490622,
+      "totp": false,
+      "credentials": [
+        {
+          "id": "54eaa6f9-b3c4-4d6a-beb9-11fe193e8f25",
+          "type": "password",
+          "userLabel": "My password",
+          "createdDate": 1770670504358,
+          "secretData": "{\"value\":\"4LS4jQCdLR2VjhL//pnl01dquoWSqnkNUMgP83nOnH4=\",\"salt\":\"5IHfNptynEI2vNNCajHrKw==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
+        }
+      ],
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-pyronear",
+        "viewer"
+      ],
+      "notBefore": 0,
+      "groups": []
     }
   ],
   "scopeMappings": [

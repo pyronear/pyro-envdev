@@ -1,0 +1,7 @@
+{
+  "description": "False positives from the pyro-dataset val set: croix-augas-01 plays sdis-77_croix-augas-01_59_2026-07-08T11-27-47 (29 frames), nemours-02 plays sdis-77_videlles-01_169_2026-07-01T16-56-20 (30 frames), then the last frame is held. YOLO fires on several frames in a row, the temporal model rejects them. Expected with temporal validation (on the engine, pyronear/pyro-engine#415, or on the API): sequences never validated, no alert.",
+  "cameras": {
+    "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},
+    "nemours-02": {"poses": {"0": 245.9, "1": 292.4, "2": 339.4, "3": 25.4}}
+  }
+}

@@ -1,0 +1,63 @@
+name: Build and Push fake-camera image
+
+# The image embeds the default scenario, fetched from the `scenarios` release.
+# latest on main, X.Y.Z on a `fake-camera-vX.Y.Z` tag, build only on pull requests.
+on:
+  push:
+    branches: [main]
+    tags: ['fake-camera-v*']
+    paths:
+      - containers/fake_camera/**
+      - data/scenarios/*/scenario.json
+      - .github/workflows/fake-camera-image.yml
+  pull_request:
+    paths:
+      - containers/fake_camera/**
+      - data/scenarios/*/scenario.json
+      - .github/workflows/fake-camera-image.yml
+
+jobs:
+  build-and-push:
+    name: Build and push pyronear/fake-camera
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch the default scenario images
+        run: make fetch-scenario
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_LOGIN }}
+          password: ${{ secrets.DOCKERHUB_PW }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: pyronear/fake-camera
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=match,pattern=fake-camera-v(.*),group=1
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/fake_camera
+          file: containers/fake_camera/Dockerfile
+          build-contexts: scenarios=data/scenarios
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

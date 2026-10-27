@@ -65,17 +65,77 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+  fakecam-1:
+    image: pyronear/fake-camera:latest
+    profiles:
+      - engine
+      - camera
+    environment:
+      - CAMERA=croix-augas-01
+      - SCENARIO=${SCENARIO:-smoke-then-clear}
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
+    volumes:
+      - ./data/scenarios:/scenarios:ro
+    ports:
+      - "127.0.0.1:8443:443"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl, urllib.request; urllib.request.urlopen('https://localhost/scenario', context=ssl._create_unverified_context())"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  fakecam-2:
+    image: pyronear/fake-camera:latest
+    profiles:
+      - engine
+      - camera
+    environment:
+      - CAMERA=nemours-02
+      - SCENARIO=${SCENARIO:-smoke-then-clear}
+      - CAM_USER=${CAM_USER}
+      - CAM_PWD=${CAM_PWD}
+    volumes:
+      - ./data/scenarios:/scenarios:ro
+    ports:
+      - "127.0.0.1:8444:443"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl, urllib.request; urllib.request.urlopen('https://localhost/scenario', context=ssl._create_unverified_context())"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   pyro_camera_api:
     image: pyronear/pyro-camera-api:latest
     profiles:
       - engine
     environment:
+      # Pose azimuths are fetched from the platform API.
+      - API_URL=http://pyro_api:5050
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
       - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}
+      # Fake cameras serve the same frames on every preset, which the detector reads as a stuck camera.
+      - ENABLE_STUCK_DETECTOR=false
+    # Lets MEDIAMTX_SERVER_IP=host.docker.internal reach a MediaMTX running on the host.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/usr/src/app/data
-    network_mode: host
+    ports:
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      # Camera tokens are written to data/credentials.json by init_script and read once at startup.
+      init_script:
+        condition: service_completed_successfully
+      fakecam-1:
+        condition: service_healthy
+      fakecam-2:
+        condition: service_healthy
     logging:
       driver: json-file
       options:
@@ -86,13 +146,15 @@ services:
     profiles:
       - engine
     environment:
-      - API_URL=http://localhost:5050
+      - API_URL=http://pyro_api:5050
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
-    command: python run.py
+    command: python run.py --pyro_camera_api_url http://pyro_camera_api:8081
     volumes:
       - ./data:/usr/src/app/data
-    network_mode: host
+    depends_on:
+      pyro_camera_api:
+        condition: service_healthy
     logging:
       driver: json-file
       options:

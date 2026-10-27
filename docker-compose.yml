@@ -73,6 +73,7 @@ services:
     environment:
       - CAMERA=croix-augas-01
       - SCENARIO=${SCENARIO:-smoke-then-clear}
+      - LOOP=${LOOP:-false}
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
     volumes:
@@ -92,6 +93,7 @@ services:
     environment:
       - CAMERA=nemours-02
       - SCENARIO=${SCENARIO:-smoke-then-clear}
+      - LOOP=${LOOP:-false}
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
     volumes:
@@ -104,12 +106,12 @@ services:
       timeout: 5s
       retries: 5
   pyro_camera_api:
-    image: pyronear/pyro-camera-api:latest
+    image: pyronear/pyro-camera-api:${PYRO_ENGINE_VERSION:-latest}
     profiles:
       - engine
     environment:
-      # Pose azimuths are fetched from the platform API.
-      - API_URL=http://pyro_api:5050
+      # Pose azimuths are fetched from the platform API (a remote one with run-engine-preprod).
+      - API_URL=${ENGINE_API_URL:-http://pyro_api:5050}
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
       - MEDIAMTX_SERVER_IP=${MEDIAMTX_SERVER_IP}
@@ -120,6 +122,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./data:/usr/src/app/data
+      # The camera API reads this exact path: swap the file to target another API.
+      - ./data/${CREDENTIALS_FILE:-credentials.json}:/usr/src/app/data/credentials.json:ro
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:
@@ -142,14 +146,14 @@ services:
         max-size: 100m
         max-file: '5'
   engine:
-    image: pyronear/pyro-engine:latest
+    image: pyronear/pyro-engine:${PYRO_ENGINE_VERSION:-latest}
     profiles:
       - engine
     environment:
-      - API_URL=http://pyro_api:5050
+      - API_URL=${ENGINE_API_URL:-http://pyro_api:5050}
       - CAM_USER=${CAM_USER}
       - CAM_PWD=${CAM_PWD}
-    command: python run.py --pyro_camera_api_url http://pyro_camera_api:8081
+    command: python run.py --pyro_camera_api_url http://pyro_camera_api:8081 --creds data/${CREDENTIALS_FILE:-credentials.json}
     volumes:
       - ./data:/usr/src/app/data
     depends_on:

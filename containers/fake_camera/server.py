@@ -28,11 +28,17 @@ NO_PAN_OPS = {"ToPos", "Stop", "ZoomInc", "ZoomDec", "FocusInc", "FocusDec"}
 
 CAM_USER = os.environ.get("CAM_USER", "")
 CAM_PWD = os.environ.get("CAM_PWD", "")
+# Replay the scenario from the start once the last frame is reached.
+LOOP = os.environ.get("LOOP", "false").lower() in ("1", "true", "yes")
 
 
-def frame_index(visits, n_frames):
-    """Frame served on the `visits`-th visit of a preset (1 = first), last one held."""
-    return min(n_frames - 1, max(0, visits - 1))
+def frame_index(visits, n_frames, loop=False):
+    """Frame served on the `visits`-th visit of a preset (1 = first).
+
+    The last frame is held, or the scenario starts again with `loop`.
+    """
+    index = max(0, visits - 1)
+    return index % n_frames if loop else min(n_frames - 1, index)
 
 
 def reply(cmd, value=None, error=None):
@@ -65,7 +71,7 @@ class Camera:
         self.zoom, self.focus, self.autofocus_disabled = 0, 720, 0
 
     def _frame(self, preset):
-        return frame_index(self.visits.get(preset, 0), len(self.frames))
+        return frame_index(self.visits.get(preset, 0), len(self.frames), LOOP)
 
     def snap(self):
         with self.lock:
@@ -82,7 +88,9 @@ class Camera:
                 "azimuth": self.azimuths.get(self.preset),
                 "frame": self._frame(self.preset),
                 "frames": len(self.frames),
-                "finished": bool(self.visits)
+                "loop": LOOP,
+                "finished": not LOOP
+                and bool(self.visits)
                 and all(self._frame(p) == len(self.frames) - 1 for p in self.visits),
             }
 
@@ -218,10 +226,11 @@ def main():
     httpd = ThreadingHTTPServer(("", port), Handler)
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     logging.info(
-        "fake camera %s plays scenario %s: "
+        "fake camera %s plays scenario %s%s: "
         "%d frames, one per preset visit, presets %s, port %d",
         camera.name,
         scenario,
+        " in a loop" if LOOP else "",
         len(camera.frames),
         sorted(camera.enabled),
         port,

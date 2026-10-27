@@ -40,6 +40,7 @@ def test_frame_index():
     assert frame_index(1, 3) == 0  # first visit
     assert frame_index(2, 3) == 1
     assert frame_index(20, 3) == 2  # last frame held
+    assert frame_index(4, 3, loop=True) == 0  # starts again
 
 
 def test_one_frame_per_preset_visit(tmp_path):

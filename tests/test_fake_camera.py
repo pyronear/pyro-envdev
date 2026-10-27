@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 sys.path.insert(
     0, str(Path(__file__).resolve().parents[1] / "containers" / "fake_camera")
 )
-from server import frame_index  # noqa: E402
+from server import Camera, frame_index  # noqa: E402
 
 load_dotenv()
 
@@ -36,10 +36,44 @@ def call(cmd, param=None, auth=AUTH):
 
 
 def test_frame_index():
-    assert frame_index(0, 30, 3) == 0
-    assert frame_index(59.9, 30, 3) == 1
-    assert frame_index(600, 30, 3) == 2  # last frame held
-    assert frame_index(90, 30, 3, loop=True) == 0  # starts again
+    assert frame_index(0, 3) == 0  # never visited
+    assert frame_index(1, 3) == 0  # first visit
+    assert frame_index(2, 3) == 1
+    assert frame_index(20, 3) == 2  # last frame held
+    assert frame_index(4, 3, loop=True) == 0  # starts again
+
+
+def test_one_frame_per_preset_visit(tmp_path):
+    (tmp_path / "scenario.json").write_text(
+        json.dumps({"cameras": {"cam": {"poses": {"1": 0.0, "2": 90.0}}}})
+    )
+    (tmp_path / "cam").mkdir()
+    for i in range(3):
+        (tmp_path / "cam" / f"{i:03d}.jpg").write_bytes(b"frame%d" % i)
+    cam = Camera(tmp_path, "cam")
+
+    def visit(preset, snaps=1):
+        cam.command("PtzCtrl", {"op": "ToPos", "id": preset})
+        return [cam.snap() for _ in range(snaps)]
+
+    assert visit(1, snaps=3) == [b"frame0"] * 3  # autofocus snaps in place: same frame
+    assert visit(2) == [b"frame0"]  # each preset starts at the first frame
+    assert visit(1) == [b"frame1"]
+    assert visit(1) == [b"frame2"]
+    assert visit(1) == [b"frame2"]  # last frame held
+    assert not cam.status()["finished"]  # preset 2 is still on its first frame
+
+
+def test_static_camera_moves_on_every_snap(tmp_path):
+    (tmp_path / "scenario.json").write_text(
+        json.dumps({"cameras": {"cam": {"poses": {}}}})
+    )
+    (tmp_path / "cam").mkdir()
+    for i in range(2):
+        (tmp_path / "cam" / f"{i:03d}.jpg").write_bytes(b"frame%d" % i)
+    cam = Camera(tmp_path, "cam")
+    assert [cam.snap() for _ in range(3)] == [b"frame0", b"frame1", b"frame1"]
+    assert cam.status()["finished"]
 
 
 def test_snap_returns_a_jpeg():

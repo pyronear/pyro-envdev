@@ -3,8 +3,10 @@
 Answers the Reolink HTTP API (``/cgi-bin/api.cgi?cmd=...``) the way the real
 ``pyro_camera_api`` Reolink adapter expects, serving the frames of a scenario.
 One process is one camera: ``SCENARIO`` and ``CAMERA`` select
-``<SCENARIOS_DIR>/<SCENARIO>/<CAMERA>/*.jpg`` (sorted, one frame per
-``interval`` seconds from the first Snap, last frame held).
+``<SCENARIOS_DIR>/<SCENARIO>/<CAMERA>/*.jpg`` (sorted, last frame held).
+Each preset moves to its next frame on its next visit: the first Snap after a
+ToPos, so snaps taken in place (autofocus) see the same frame. A camera never
+positioned (static) moves on every Snap.
 
 ``GET /scenario`` is not part of the Reolink API: it reports the camera state
 (preset, azimuth, frame, finished) so tests know where the scenario is.
@@ -15,7 +17,6 @@ import logging
 import os
 import ssl
 import threading
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -31,9 +32,12 @@ CAM_PWD = os.environ.get("CAM_PWD", "")
 LOOP = os.environ.get("LOOP", "false").lower() in ("1", "true", "yes")
 
 
-def frame_index(elapsed, interval, n_frames, loop=False):
-    """Frame served `elapsed` seconds after the first Snap: last one held, or looped."""
-    index = int(elapsed // interval)
+def frame_index(visits, n_frames, loop=False):
+    """Frame served on the `visits`-th visit of a preset (1 = first).
+
+    The last frame is held, or the scenario starts again with `loop`.
+    """
+    index = max(0, visits - 1)
     return index % n_frames if loop else min(n_frames - 1, index)
 
 
@@ -49,7 +53,6 @@ class Camera:
     def __init__(self, scenario_dir, name):
         meta = json.loads((scenario_dir / "scenario.json").read_text())
         self.name = name
-        self.interval = meta.get("interval", 30)
         # preset id -> real-world azimuth, informational only (see /scenario)
         self.azimuths = {
             int(k): float(v) for k, v in meta["cameras"][name]["poses"].items()
@@ -61,22 +64,21 @@ class Camera:
                 f"no frames in {scenario_dir / name}, run `make fetch-scenario` first"
             )
         self.lock = threading.Lock()
-        self.started = None  # monotonic time of the first Snap
-        self.preset = None  # unknown until a ToPos
+        self.preset = None  # unknown until a ToPos; stays None on a static camera
+        self.visits = {}  # preset -> visits that took a Snap
+        self.arrived = True  # the next Snap is the first at the current position
         self.enabled = set(self.azimuths)
         self.zoom, self.focus, self.autofocus_disabled = 0, 720, 0
 
-    def _elapsed(self):
-        return 0.0 if self.started is None else time.monotonic() - self.started
-
-    def _frame(self):
-        return frame_index(self._elapsed(), self.interval, len(self.frames), LOOP)
+    def _frame(self, preset):
+        return frame_index(self.visits.get(preset, 0), len(self.frames), LOOP)
 
     def snap(self):
         with self.lock:
-            if self.started is None:
-                self.started = time.monotonic()
-            return self.frames[self._frame()].read_bytes()
+            if self.arrived or self.preset is None:
+                self.visits[self.preset] = self.visits.get(self.preset, 0) + 1
+                self.arrived = False
+            return self.frames[self._frame(self.preset)].read_bytes()
 
     def status(self):
         with self.lock:
@@ -84,13 +86,12 @@ class Camera:
                 "camera": self.name,
                 "preset": self.preset,
                 "azimuth": self.azimuths.get(self.preset),
-                "elapsed": round(self._elapsed(), 1),
-                "frame": self._frame(),
+                "frame": self._frame(self.preset),
                 "frames": len(self.frames),
                 "loop": LOOP,
                 "finished": not LOOP
-                and self.started is not None
-                and self._frame() == len(self.frames) - 1,
+                and bool(self.visits)
+                and all(self._frame(p) == len(self.frames) - 1 for p in self.visits),
             }
 
     def command(self, cmd, param):
@@ -102,6 +103,7 @@ class Camera:
                     if idx not in self.enabled:
                         return reply(cmd, error=f"preset {idx} is not set")
                     self.preset = idx
+                    self.arrived = True
                 elif op not in NO_PAN_OPS:
                     self.preset = None
                 return reply(cmd)
@@ -225,12 +227,11 @@ def main():
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     logging.info(
         "fake camera %s plays scenario %s%s: "
-        "%d frames, one every %ss, presets %s, port %d",
+        "%d frames, one per preset visit, presets %s, port %d",
         camera.name,
         scenario,
         " in a loop" if LOOP else "",
         len(camera.frames),
-        camera.interval,
         sorted(camera.enabled),
         port,
     )

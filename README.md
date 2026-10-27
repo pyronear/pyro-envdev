@@ -117,8 +117,11 @@ docker compose logs -f engine
 API (`/cgi-bin/api.cgi?cmd=Snap|PtzCtrl|GetPtzPreset|...`) over HTTPS with a self-signed
 certificate, so the real `pyro_camera_api` and `engine` run against them unchanged
 (`data/credentials.json`, adapter `reolink`). Each one plays a scenario: a list of
-images shown one after the other, one every `interval` seconds from the first `Snap`,
-the last image being held forever. Every preset of a camera serves the same images for now.
+images shown one after the other, the last image being held forever. Each preset moves to
+its next image on its next visit by the patrol (the first `Snap` after a `ToPos`), so the
+engine sees every image once per preset, in order, whatever its timing; snaps taken in place,
+like the autofocus ones, see the same image. Every preset of a camera serves the same images
+for now.
 
 ```bash
 make run-engine                              # engine + camera API + fake cameras
@@ -132,7 +135,8 @@ Scenarios:
 * `never-smoke`: both cameras hold a clear view
 
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
-current preset and azimuth, frame index and `finished` once the last frame is shown.
+current preset and azimuth, its frame index and `finished` once every visited preset shows the
+last frame.
 
 The image embeds `smoke-then-clear`, so it also runs alone, without the `data/scenarios`
 volume (used by pi-manager-template on a test station).
@@ -149,7 +153,7 @@ live next to it and are downloaded by `make fetch-scenario SCENARIO=<name>` from
 
 ```
 data/scenarios/smoke-then-clear/
-  scenario.json          # {"interval": 30, "cameras": {"<name>": {"poses": {"<preset>": <azimuth>}}}}
+  scenario.json          # {"cameras": {"<name>": {"poses": {"<preset>": <azimuth>}}}}
   croix-augas-01/        # frames of fakecam-1, in order: 000.jpg, 001.jpg, ...
   nemours-02/            # frames of fakecam-2
 ```

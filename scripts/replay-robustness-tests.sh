@@ -3,7 +3,8 @@
 #
 # Runs ON the Pi (user with sudo, Docker installed), from any directory:
 #   scp replay-robustness-tests.sh pi@<ip>:~ && ssh pi@<ip>
-#   ./replay-robustness-tests.sh setup        # branch, images, fake cameras (20 to 30 min on a Pi 5)
+#   ./replay-robustness-tests.sh setup        # branch, images, fake cameras, scenarios (20 to 30 min on a Pi 5)
+#   ./replay-robustness-tests.sh scenarios    # only regenerate the fake credentials and scenarios
 #   ./replay-robustness-tests.sh 419          # engine frozen -> healthcheck restarts it      (~2 min)
 #   ./replay-robustness-tests.sh 458-timeout  # Reolink call that hangs -> 10 s timeout       (~2 min)
 #   ./replay-robustness-tests.sh 458-health   # camera API frozen -> healthcheck restarts it  (~3 min)
@@ -123,6 +124,12 @@ setup() {
   D build -q --build-context scenarios=data/scenarios -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:local containers/fake_camera/
   D network inspect $FAKE_NET >/dev/null 2>&1 || D network create --subnet 172.30.0.0/24 $FAKE_NET >/dev/null
 
+  make_scenarios
+  ok "setup done, images tagged $TAG"
+}
+
+# fake credentials pointing at the fake cameras, and the day / night / noisy scenarios
+make_scenarios() {
   say "scenarios: day (one colour frame), night (same frame in grayscale = IR), noisy (40 variants of one view)"
   read -r REAL1 REAL2 <<<"$(cams)"
   python3 - "$ENGINE_DIR/data/credentials.real.json" "$ENGINE_DIR/data/credentials.fake.json" "$REAL1" "$REAL2" "$FAKE1" "$FAKE2" <<'EOF'
@@ -133,17 +140,17 @@ for old, new in ((r1, f1), (r2, f2)):
     d = dict(c[old]); d["adapter"] = "reolink"; out[new] = d
 json.dump(out, open(dst, "w"), indent=2)
 EOF
-  D run --rm -v "$SCN:/s" -v "$ENGINE_DIR/data/credentials.fake.json:/creds.json:ro" "pyronear/pyro-camera-api:$TAG" python - <<'EOF'
+  D run --rm -i -v "$SCN:/s" -v "$ENGINE_DIR/data/credentials.fake.json:/creds.json:ro" "pyronear/pyro-camera-api:$TAG" python - <<'EOF'
 import json, pathlib
 import numpy as np
 from PIL import Image
 creds = json.load(open("/creds.json"))
 src = sorted(pathlib.Path("/s/never-smoke").glob("*/000.jpg"))
-poses = {str(p): i * 90.0 for i, p in enumerate(next(iter(creds.values()))["poses"])}
 rng = np.random.default_rng(0)
 for scn in ("day", "night", "noisy"):
     d = pathlib.Path(f"/s/pi-{scn}"); d.mkdir(exist_ok=True)
-    d.joinpath("scenario.json").write_text(json.dumps({"description": scn, "cameras": {c["name"]: {"poses": poses} for c in creds.values()}}))
+    cameras = {c["name"]: {"poses": {str(p): i * 90.0 for i, p in enumerate(c["poses"])}} for c in creds.values()}
+    d.joinpath("scenario.json").write_text(json.dumps({"description": scn, "cameras": cameras}))
     for cam, frame in zip(creds.values(), src):
         out = d / cam["name"]; out.mkdir(exist_ok=True)
         img = Image.open(frame).convert("RGB")
@@ -158,7 +165,8 @@ for scn in ("day", "night", "noisy"):
 print("scenarios written")
 EOF
   sudo -n chown -R "$USER" "$SCN"
-  ok "setup done, images tagged $TAG"
+  for scn in day night noisy; do [ -d "$SCN/pi-$scn" ] || die "scenario pi-$scn not generated"; done
+  ok "scenarios written under $SCN"
 }
 
 # ---------------------------------------------------------------- tests
@@ -254,6 +262,7 @@ test_461_frozen() {
 STARTED=$(date +%Y-%m-%dT%H:%M:%S)
 case "${1:-}" in
   setup) setup ;;
+  scenarios) make_scenarios ;;
   419) test_419 ;;
   458-timeout) test_458_timeout ;;
   458-health) test_458_health ;;

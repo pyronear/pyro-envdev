@@ -43,6 +43,9 @@ make run
 * **pyro-api**: Pyronear API (uvicorn)
 * **db**: PostgreSQL database
 * **rustfs**: S3-compatible storage (via RustFS)
+* **keycloak**: identity provider for platform users and scripts (realm `pyronear`). The API image must
+  verify Keycloak tokens, which needs pyro-api's Keycloak support (build it with `make build-external`
+  until a release ships it).
 * **frontend**: Web app (React, [pyro-platform](https://github.com/pyronear/pyro-platform))
 * **pyro-engine**: Engine service (requires cameras, optional)
 * **reolinkdev1 / reolinkdev2**: Fake Reolink cameras sending test images
@@ -70,7 +73,7 @@ docker logs engine
 
 ### Partial runs
 
-* Backend only (API, DB, S3):
+* Backend only (API, DB, S3, Keycloak):
 
   ```bash
   make run-backend
@@ -97,6 +100,11 @@ docker logs engine
   * Admin access currently does not display camera alerts, use user creds from `data/csv/users.csv`
   * Configuration (API URL, etc.) lives in `containers/frontend/app-config.js`
 * **Notebooks**: [http://localhost:8889](http://localhost:8889)
+* **Keycloak admin console**: [http://localhost:9310/admin/](http://localhost:9310/admin/)
+
+  * Login: `KEYCLOAK_USERNAME` / `KEYCLOAK_PASSWORD` (set in `.env`)
+  * The realm is imported from `containers/keycloak/realm/realm_pyronear.json` only when the container is
+    created. After changing that file, recreate it: `docker compose up -d --force-recreate keycloak`
 * **pgAdmin (db-ui)**: [http://localhost:8888/browser/](http://localhost:8888/browser/)
 
   * Login: `DB_UI_MAIL` / `DB_UI_PWD` (set in `.env`)
@@ -115,10 +123,47 @@ docker logs engine
 
 ### Users Keycloak
 
-| Username | Organization_id | Password |
-|----------|-----------------|----------|
-| test77   | 2               | test     |
-| test07   | 3               | test     |
+| Username      | Organization_id | Realm role | Password |
+|---------------|-----------------|------------|----------|
+| test77        | 2               | operator   | test     |
+| test07        | 3               | operator   | test     |
+| test07-viewer | 3               | viewer     | test     |
+| test-admin    | 1               | admin      | test     |
+
+Realm roles map to API roles: `admin` → `admin`, `operator` → `agent`, `viewer` → `user`.
+The organization comes from the `pyro-organization` user attribute (an API organization id).
+
+Access tokens for pyro-api carry:
+
+* `aud`: includes `pyro-api` (`pyro-api` client scope)
+* `roles`: the user's realm roles (`pyro-api` client scope)
+* `organization_id`: the `pyro-organization` attribute (`pyro-organization` client scope)
+
+### API client
+
+pyro-api checks every Keycloak token twice: locally (signature, expiry, issuer, audience), then with
+Keycloak's introspection endpoint, so a revoked session or a disabled user is rejected on its next request.
+It authenticates those calls as the confidential `pyro-api` client (secret `KEYCLOAK_API_CLIENT_SECRET`,
+dev-only value `pyro-api-dev-secret`).
+
+### Scripts service account
+
+The init script and notebooks call the API with an admin token from the `pyro-scripts` client
+(client credentials grant, realm role `admin`, organization 1), configured by `KEYCLOAK_TOKEN_URL`,
+`KEYCLOAK_SCRIPTS_CLIENT_ID` and `KEYCLOAK_SCRIPTS_CLIENT_SECRET` in `.env`. The secret is a dev-only value
+committed in the realm export.
+
+```python
+from api import get_token
+token = get_token(KEYCLOAK_TOKEN_URL, KEYCLOAK_SCRIPTS_CLIENT_ID, KEYCLOAK_SCRIPTS_CLIENT_SECRET)
+```
+
+Service-account tokens last 10 hours (`access.token.lifespan` on the `pyro-scripts` client, capped by the
+realm's 10-hour session maximum) because the scripts fetch one token per run; user tokens keep the realm's
+5 minutes.
+
+From the host, use `http://localhost:9310/realms/pyronear/protocol/openid-connect/token` as the token URL.
+Keycloak issues the same `iss` (`http://localhost:9310/realms/pyronear`) either way (`KC_HOSTNAME`).
 
 
 ### Add more images to Reolink Dev

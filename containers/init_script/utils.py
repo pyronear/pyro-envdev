@@ -18,25 +18,30 @@ import zipfile
 import requests
 
 
-def get_token(api_url: str, login: str, pwd: str) -> str:
+def get_service_token(token_url: str, client_id: str, client_secret: str) -> str:
     """
-    Authenticate with API and return access token.
+    Get an access token from Keycloak for a service account (client credentials grant).
 
     Args:
-        api_url: Base API URL (e.g., "http://api:5050/api/v1")
-        login: Username
-        pwd: Password
+        token_url: Realm token endpoint
+            (e.g., "http://keycloak:9310/realms/pyronear/protocol/openid-connect/token")
+        client_id: Confidential client with a service account (e.g., "pyro-scripts")
+        client_secret: Secret of that client
 
     Returns:
         Access token string
     """
     response = requests.post(
-        f"{api_url}/login/creds",
-        data={"username": login, "password": pwd},
+        token_url,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
         timeout=5,
     )
     if response.status_code != 200:
-        raise ValueError(response.json()["detail"])
+        raise ValueError(response.json().get("error_description", response.text))
     return response.json()["access_token"]
 
 

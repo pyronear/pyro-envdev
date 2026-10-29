@@ -37,8 +37,11 @@ credentials_path = "data/credentials.json"
 credentials_path_etl = "data/credentials-wildfire.json"
 
 
+admin_token = get_service_token(
+    keycloak_token_url, keycloak_client_id, keycloak_client_secret
+)
 superuser_auth = {
-    "Authorization": f"Bearer {get_service_token(keycloak_token_url, keycloak_client_id, keycloak_client_secret)}",
+    "Authorization": f"Bearer {admin_token}",
     "Content-Type": "application/json",
 }
 

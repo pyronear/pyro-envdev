@@ -154,8 +154,8 @@ The init script and notebooks call the API with an admin token from the `pyro-sc
 committed in the realm export.
 
 ```python
-from api import get_token
-token = get_token(KEYCLOAK_TOKEN_URL, KEYCLOAK_SCRIPTS_CLIENT_ID, KEYCLOAK_SCRIPTS_CLIENT_SECRET)
+from api import get_service_token
+token = get_service_token(KEYCLOAK_TOKEN_URL, KEYCLOAK_SCRIPTS_CLIENT_ID, KEYCLOAK_SCRIPTS_CLIENT_SECRET)
 ```
 
 Service-account tokens last 10 hours (`access.token.lifespan` on the `pyro-scripts` client, capped by the

@@ -15,7 +15,7 @@ from pyroclient import Client
 
 # Import utility functions
 from utils import (
-    get_token,
+    get_service_token,
     api_request,
     read_json_file,
     write_json_file,
@@ -29,15 +29,19 @@ base_url = os.environ.get("API_URL")
 # API URL with /api/v1 for direct API requests
 api_url = base_url + "/api/v1"
 
-superuser_login = os.environ.get("SUPERADMIN_LOGIN")
-superuser_pwd = os.environ.get("SUPERADMIN_PWD")
+keycloak_token_url = os.environ.get("KEYCLOAK_TOKEN_URL")
+keycloak_client_id = os.environ.get("KEYCLOAK_SCRIPTS_CLIENT_ID")
+keycloak_client_secret = os.environ.get("KEYCLOAK_SCRIPTS_CLIENT_SECRET")
 slack_hook = os.environ.get("SLACK_HOOK")
 credentials_path = "data/credentials.json"
 credentials_path_etl = "data/credentials-wildfire.json"
 
 
+admin_token = get_service_token(
+    keycloak_token_url, keycloak_client_id, keycloak_client_secret
+)
 superuser_auth = {
-    "Authorization": f"Bearer {get_token(api_url, superuser_login, superuser_pwd)}",
+    "Authorization": f"Bearer {admin_token}",
     "Content-Type": "application/json",
 }
 

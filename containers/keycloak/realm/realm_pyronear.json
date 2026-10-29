@@ -588,6 +588,47 @@
       ],
       "notBefore": 0,
       "groups": []
+    },
+    {
+      "username": "service-account-pyro-scripts",
+      "enabled": true,
+      "serviceAccountClientId": "pyro-scripts",
+      "attributes": {
+        "pyro-organization": [
+          "1"
+        ]
+      },
+      "realmRoles": [
+        "default-roles-pyronear",
+        "admin"
+      ],
+      "groups": []
+    },
+    {
+      "username": "test-admin",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Pyronear",
+      "email": "admin@mail.com",
+      "attributes": {
+        "pyro-organization": [
+          "1"
+        ]
+      },
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test",
+          "temporary": false
+        }
+      ],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-pyronear",
+        "admin"
+      ],
+      "groups": []
     }
   ],
   "scopeMappings": [
@@ -853,7 +894,9 @@
         "profile",
         "roles",
         "basic",
-        "email"
+        "email",
+        "pyro-api",
+        "pyro-organization"
       ],
       "optionalClientScopes": [
         "address",
@@ -974,6 +1017,56 @@
         "organization",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "pyro-scripts",
+      "name": "Pyronear envdev scripts",
+      "description": "Service account used by the init script and notebooks (client credentials). Dev-only secret.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pyro-scripts-dev-secret",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email",
+        "pyro-api",
+        "pyro-organization"
+      ],
+      "optionalClientScopes": [],
+      "attributes": {
+        "access.token.lifespan": "36000"
+      }
+    },
+    {
+      "clientId": "pyro-api",
+      "name": "Pyronear alert API",
+      "description": "Confidential client the API authenticates as to introspect access tokens. Dev-only secret.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pyro-api-dev-secret",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": []
     }
   ],
   "clientScopes": [
@@ -1556,7 +1649,7 @@
             "id.token.claim": "true",
             "lightweight.claim": "true",
             "access.token.claim": "true",
-            "claim.name": "organization",
+            "claim.name": "organization_id",
             "jsonType.label": "int"
           }
         }
@@ -1695,6 +1788,46 @@
           }
         }
       ]
+    },
+    {
+      "name": "pyro-api",
+      "description": "Claims pyro-api relies on: its audience and the user's realm roles",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false",
+        "include.in.openid.provider.metadata": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "pyro-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "pyro-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false"
+          }
+        },
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "defaultDefaultClientScopes": [
@@ -1706,7 +1839,8 @@
     "web-origins",
     "acr",
     "basic",
-    "pyro-organization"
+    "pyro-organization",
+    "pyro-api"
   ],
   "defaultOptionalClientScopes": [
     "offline_access",

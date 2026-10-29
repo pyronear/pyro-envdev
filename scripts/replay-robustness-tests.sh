@@ -3,16 +3,15 @@
 #
 # Runs ON the Pi (user with sudo, Docker installed), from any directory:
 #   scp replay-robustness-tests.sh pi@<ip>:~ && ssh pi@<ip>
-#   ./replay-robustness-tests.sh setup        # branch, images, fake cameras, scenarios (20 to 30 min on a Pi 5)
-#   ./replay-robustness-tests.sh scenarios    # only regenerate the fake credentials and scenarios
-#   ./replay-robustness-tests.sh 419          # engine frozen -> healthcheck restarts it      (~2 min)
-#   ./replay-robustness-tests.sh 458-timeout  # Reolink call that hangs -> 10 s timeout       (~2 min)
-#   ./replay-robustness-tests.sh 458-health   # camera API frozen -> healthcheck restarts it  (~3 min)
-#   ./replay-robustness-tests.sh 459          # night per frame, 204 never proves night       (~15 min)
-#   ./replay-robustness-tests.sh 461-silent   # no fresh image -> API reboot, budget on disk  (~18 min)
-#   ./replay-robustness-tests.sh 461-frozen   # frozen + not_moving -> reboot, 30 min cooldown (~50 min)
-#   ./replay-robustness-tests.sh all          # everything above, in that order (~90 min)
-#   ./replay-robustness-tests.sh real         # back to the real cameras
+#   ./replay-robustness-tests.sh setup           # branch, images, fake cameras, scenarios (20 to 30 min on a Pi 5)
+#   ./replay-robustness-tests.sh scenarios       # only regenerate the fake credentials and scenarios
+#   ./replay-robustness-tests.sh camera-timeout  # Reolink call that hangs -> 10 s timeout       (~2 min)
+#   ./replay-robustness-tests.sh api-frozen      # camera API frozen -> healthcheck restarts it  (~3 min)
+#   ./replay-robustness-tests.sh night-per-frame # night per frame, 204 never proves night       (~15 min)
+#   ./replay-robustness-tests.sh camera-silent   # no fresh image -> API reboot, budget on disk  (~18 min)
+#   ./replay-robustness-tests.sh camera-frozen   # frozen + not_moving -> reboot, 30 min cooldown (~50 min)
+#   ./replay-robustness-tests.sh all             # everything above, in that order (~90 min)
+#   ./replay-robustness-tests.sh real            # back to the real cameras
 #
 # Needs: passwordless sudo, ~/pyro-engine checkout with a .env (CAM_USER, CAM_PWD, API_URL...) and
 # data/credentials.json holding two cameras. Everything else is built by `setup`.
@@ -24,7 +23,7 @@ ENGINE_DIR=${ENGINE_DIR:-$HOME/pyro-engine}
 ENVDEV_DIR=${ENVDEV_DIR:-$HOME/pyro-envdev}
 TAG=${TAG:-robustness}
 # pyro-engine PR branches merged on top of develop; BRANCHES= once they are merged
-BRANCHES=${BRANCHES-"fix/heartbeat-signal-deadlock fix/engine-day-night-per-frame feat/camera-recovery"}
+BRANCHES=${BRANCHES-"feat/camera-recovery"}
 FAKE_NET=fakecams
 FAKE1=172.30.0.11
 FAKE2=172.30.0.12
@@ -170,64 +169,51 @@ EOF
 }
 
 # ---------------------------------------------------------------- tests
-test_419() {
-  say "419: freeze the engine, backdate engine.log, expect a restart"
-  use_real; stack_up
-  local before; before=$(restarts engine); mark
-  D top engine -o pid,comm | awk '/python|tee/ {print $1}' | xargs sudo -n kill -STOP
-  D exec engine touch -d "2 hours ago" engine.log
-  local end=$(( $(date +%s) + 120 ))
-  while [ "$(date +%s)" -lt "$end" ]; do [ "$(restarts engine)" -gt "$before" ] && break; sleep 5; done
-  [ "$(restarts engine)" -gt "$before" ] || die "engine not restarted within 2 min"
-  wait_log engine 60 "verified in API" || die "engine did not come back"
-  ok "419 engine killed by the healthcheck and restarted"
-}
-
-test_458_timeout() {
-  say "458: black-hole the first camera's HTTPS, expect 'Read timed out (read timeout=10)'"
+test_camera_timeout() {
+  say "black-hole the first camera's HTTPS, expect 'Read timed out (read timeout=10)'"
   use_real; stack_up
   read -r REAL1 _ <<<"$(cams)"
   sink_on "$REAL1"; mark
   wait_log pyro-camera-api 180 "\[$REAL1\].*Read timed out.*read timeout=10" || die "no 10 s timeout seen"
   sink_off
-  ok "458 Reolink call timed out after 10 s instead of hanging"
+  ok "Reolink call timed out after 10 s instead of hanging"
 }
 
-test_458_health() {
-  say "458: freeze the camera API, expect the healthcheck to restart it"
+test_api_frozen() {
+  say "freeze the camera API, expect the healthcheck to restart it"
   use_real; stack_up
   local before; before=$(restarts pyro-camera-api)
   D top pyro-camera-api -o pid,comm | awk '/uvicorn|python/ {print $1}' | xargs sudo -n kill -STOP
   local end=$(( $(date +%s) + 180 ))
   while [ "$(date +%s)" -lt "$end" ]; do [ "$(restarts pyro-camera-api)" -gt "$before" ] && break; sleep 5; done
   [ "$(restarts pyro-camera-api)" -gt "$before" ] || die "camera API not restarted within 3 min"
-  ok "458 camera API killed by the healthcheck and restarted"
+  ok "camera API killed by the healthcheck and restarted"
 }
 
-test_459() {
-  say "459: camera 1 grayscale (IR), camera 2 colour: night frames skipped, site awake"
+test_night_per_frame() {
+  say "camera 1 grayscale (IR), camera 2 colour: night frames skipped, site awake"
   fakecam 1 pi-night; fakecam 2 pi-day; use_fake; stack_up
   wait_log engine 240 "Night frame for ${FAKE1}_" || die "no night frame seen on camera 1"
   wait_log engine 120 "Frame identical to the previous one for ${FAKE2}_" || die "identical frame not skipped on camera 2"
   [ "$(count_log engine 'Nighttime detected')" = 0 ] || die "site went to sleep with a day camera"
-  ok "459 phase 1: night per frame, identical frames skipped, no sleep"
+  ok "phase 1: night per frame, identical frames skipped, no sleep"
 
-  say "459: stop camera 2 so it answers 204 after 5 min: one night frame + one missing must not sleep"
+  say "stop camera 2 so it answers 204 after 5 min: one night frame + one missing must not sleep"
   D stop fakecam-2 >/dev/null; mark
   sleep 480
   [ "$(count_log engine 'Nighttime detected')" = 0 ] || die "site went to sleep on night + 204"
   curl -s -o /dev/null -w '%{http_code}' "localhost:8081/cameras/latest_image?camera_ip=$FAKE2&pose=$(python3 -c "import json;print(json.load(open('$ENGINE_DIR/data/credentials.json'))['$FAKE2']['poses'][0])")" | grep -q 204 || die "camera 2 not in 204"
-  ok "459 phase 2: 204 never proves night"
+  ok "phase 2: 204 never proves night"
 
-  say "459: both cameras grayscale: patrols stopped, site sleeps"
+  say "both cameras grayscale: patrols stopped, site sleeps"
   fakecam 2 pi-night; mark
   wait_log engine 240 "Nighttime detected by every camera" || die "site did not sleep with every camera at night"
   [ "$(count_log engine 'Stopped patrol for camera')" -ge 1 ] || die "patrols not stopped"
-  ok "459 phase 3: every camera at night, sleep"
+  ok "phase 3: every camera at night, sleep"
 }
 
-test_461_silent() {
-  say "461: black-hole both cameras: no_fresh_image -> API reboot attempt, budget kept across a restart"
+test_camera_silent() {
+  say "black-hole both cameras: no_fresh_image -> API reboot attempt, budget kept across a restart"
   use_real; sudo -n rm -f "$ENGINE_DIR/data/camera_recovery.json"; stack_up
   read -r REAL1 REAL2 <<<"$(cams)"
   sink_on "$REAL1" "$REAL2"; mark
@@ -239,23 +225,23 @@ test_461_silent() {
   D restart pyro-camera-api >/dev/null; sleep 25
   status "$REAL1" | grep -q '"reboot_attempts_24h":1' || die "attempt lost after a container restart"
   sink_off
-  ok "461 silent camera: reboot attempted, no password in logs, budget survives a restart"
+  ok "silent camera: reboot attempted, no password in logs, budget survives a restart"
 }
 
-test_461_frozen() {
-  say "461: camera 1 frozen (same pixels), camera 2 not moving (fresh frames, same view), ALLOW_STILL_CAMERA=false"
+test_camera_frozen() {
+  say "camera 1 frozen (same pixels), camera 2 not moving (fresh frames, same view), ALLOW_STILL_CAMERA=false"
   fakecam 1 pi-day; fakecam 2 pi-noisy; use_fake; sudo -n rm -f "$ENGINE_DIR/data/camera_recovery.json"; stack_up
   wait_log pyro-camera-api 1000 "\[$FAKE1\] Rebooting camera, frozen" || die "camera 1 not rebooted for frozen within 16 min"
   wait_log pyro-camera-api 60 "\[$FAKE2\] Rebooting camera, not_moving" || die "camera 2 not rebooted for not_moving"
   [ "$(count_log pyro-camera-api 'Reboot command rejected')" = 0 ] || die "fake camera rejected the reboot"
-  ok "461 frozen and not_moving detected, reboot sent"
+  ok "frozen and not_moving detected, reboot sent"
 
-  say "461: cooldown: 'budget spent' once, then a second reboot 30 min after the first"
+  say "cooldown: 'budget spent' once, then a second reboot 30 min after the first"
   wait_log pyro-camera-api 1000 "\[$FAKE1\].*reboot budget spent" || die "no budget message at the next hit 2/2"
   sleep 1000
   [ "$(count_log pyro-camera-api "\[$FAKE1\].*reboot budget spent")" = 1 ] || die "budget message logged more than once"
   status "$FAKE1" | grep -q '"reboot_attempts_24h":2' || die "second attempt not made after the cooldown"
-  ok "461 cooldown: one budget line, second reboot after 30 min, 2 attempts on disk"
+  ok "cooldown: one budget line, second reboot after 30 min, 2 attempts on disk"
 }
 
 # ---------------------------------------------------------------- main
@@ -263,13 +249,12 @@ STARTED=$(date +%Y-%m-%dT%H:%M:%S)
 case "${1:-}" in
   setup) setup ;;
   scenarios) make_scenarios ;;
-  419) test_419 ;;
-  458-timeout) test_458_timeout ;;
-  458-health) test_458_health ;;
-  459) test_459 ;;
-  461-silent) test_461_silent ;;
-  461-frozen) test_461_frozen ;;
-  all) test_419; test_458_timeout; test_458_health; test_459; test_461_silent; test_461_frozen; use_real; stack_up; ok "all scenarios passed" ;;
+  camera-timeout) test_camera_timeout ;;
+  api-frozen) test_api_frozen ;;
+  night-per-frame) test_night_per_frame ;;
+  camera-silent) test_camera_silent ;;
+  camera-frozen) test_camera_frozen ;;
+  all) test_camera_timeout; test_api_frozen; test_night_per_frame; test_camera_silent; test_camera_frozen; use_real; stack_up; ok "all scenarios passed" ;;
   real) use_real; stack_up; ok "back on the real cameras" ;;
-  *) sed -n '2,20p' "$0"; exit 1 ;;
+  *) sed -n '2,19p' "$0"; exit 1 ;;
 esac

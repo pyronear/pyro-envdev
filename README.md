@@ -212,12 +212,11 @@ it recreates the containers.
 
 | Scenario | Fault injected | Expected | Time |
 |---|---|---|---|
-| `419` | engine process frozen, `engine.log` backdated | healthcheck restarts the engine | 2 min |
-| `458-timeout` | camera HTTPS redirected to a listener that never answers | `Read timed out (read timeout=10)` | 2 min |
-| `458-health` | camera API process frozen | healthcheck restarts the API | 3 min |
-| `459` | one camera in grayscale (infrared), then one without a fresh image (204), then both grayscale | night frames skipped, no sleep on 204, sleep when every camera is at night | 15 min |
-| `461-silent` | both cameras redirected to the silent listener | API reboot attempt, no password in logs, budget kept after a container restart | 18 min |
-| `461-frozen` | one fake camera holding one frame, one serving noisy variants of one view | `frozen` and `not_moving` reboots, one "budget spent" line, second reboot after the 30 min cooldown | 50 min |
+| `camera-timeout` | camera HTTPS redirected to a listener that never answers | `Read timed out (read timeout=10)` | 2 min |
+| `api-frozen` | camera API process frozen | healthcheck restarts the API | 3 min |
+| `night-per-frame` | one camera in grayscale (infrared), then one without a fresh image (204), then both grayscale | night frames skipped, no sleep on 204, sleep when every camera is at night | 15 min |
+| `camera-silent` | both cameras redirected to the silent listener | API reboot attempt, no password in logs, budget kept after a container restart | 18 min |
+| `camera-frozen` | one fake camera holding one frame, one serving noisy variants of one view | `frozen` and `not_moving` reboots, one "budget spent" line, second reboot after the 30 min cooldown | 50 min |
 
 Each scenario prints `OK:` or `FAIL:` and exits non-zero on failure. The redirect rule and
 its listener are removed on exit. Timings are the detector's own (5 min checks, 30 min

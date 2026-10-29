@@ -192,6 +192,36 @@ pyro-engine checkout, point `credentials.json` at them with the host and port as
 
 and use the same `CAM_USER` / `CAM_PWD` as in this repo's `.env`.
 
+### Robustness tests on a Pi
+
+`scripts/replay-robustness-tests.sh` replays the failures of
+[roadmap#16](https://github.com/pyronear/roadmap/issues/16) on a test Pi running the real
+engine stack, with the fake cameras standing in for broken ones. It runs on the Pi itself:
+
+```bash
+scp scripts/replay-robustness-tests.sh pi@<ip>:~ && ssh pi@<ip>
+./replay-robustness-tests.sh setup      # pyro-engine branch, images, fake cameras, scenarios
+./replay-robustness-tests.sh all        # every scenario below, about 90 min
+./replay-robustness-tests.sh real       # back to the real cameras
+```
+
+The Pi needs Docker, passwordless sudo and a `~/pyro-engine` checkout with its `.env` and a
+two-camera `data/credentials.json`. Point `API_URL` at preprod: the engine sends heartbeats
+and images with the real camera tokens. Do not deploy with pi-manager on the Pi during a run,
+it recreates the containers.
+
+| Scenario | Fault injected | Expected | Time |
+|---|---|---|---|
+| `camera-timeout` | camera HTTPS redirected to a listener that never answers | `Read timed out (read timeout=10)` | 2 min |
+| `api-frozen` | camera API process frozen | healthcheck restarts the API | 3 min |
+| `night-per-frame` | one camera in grayscale (infrared), then one without a fresh image (204), then both grayscale | night frames skipped, no sleep on 204, sleep when every camera is at night | 15 min |
+| `camera-silent` | both cameras redirected to the silent listener | API reboot attempt, no password in logs, budget kept after a container restart | 18 min |
+| `camera-frozen` | one fake camera holding one frame, one serving noisy variants of one view | `frozen` and `not_moving` reboots, one "budget spent" line, second reboot after the 30 min cooldown | 50 min |
+
+Each scenario prints `OK:` or `FAIL:` and exits non-zero on failure. The redirect rule and
+its listener are removed on exit. Timings are the detector's own (5 min checks, 30 min
+cooldown), so there is no fast mode.
+
 ---
 
 ## 📂 Data Usage

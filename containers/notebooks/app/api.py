@@ -8,11 +8,29 @@ from urllib.parse import urljoin
 
 import requests
 
-__all__ = ["get_token", "get_camera_token"]
+__all__ = ["get_service_token", "get_token", "get_camera_token"]
+
+
+def get_service_token(token_url: str, client_id: str, client_secret: str) -> str:
+    """Get a Keycloak access token for a service account (client credentials)"""
+    response = requests.post(
+        token_url,
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+        timeout=5,
+    )
+    response.raise_for_status()
+    return response.json()["access_token"]
 
 
 def get_token(API_URL, login: str, passwrd: str) -> str:
-    """Authenticate with API and return access token"""
+    """Legacy: log in with API credentials.
+
+    Only works while pyro-api accepts API-issued user tokens.
+    """
     response = requests.post(
         urljoin(API_URL, "/api/v1/login/creds"),
         data={"username": login, "password": passwrd},

@@ -25,6 +25,12 @@ services:
     - TEMPORAL_API_URL=${TEMPORAL_API_URL:-}
     - TEMPORAL_MODEL_THRESHOLD=${TEMPORAL_MODEL_THRESHOLD:-0.45}
     - TEMPORAL_API_TOKEN=${TEMPORAL_API_TOKEN:-}
+    # Tokens carry the browser-facing issuer; the API calls Keycloak (signing keys, introspection) over the
+    # compose network, authenticated as the pyro-api client.
+    - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER:-http://localhost:9310/realms/pyronear}
+    - KEYCLOAK_BACKCHANNEL_URL=http://keycloak:9310/realms/pyronear
+    - KEYCLOAK_CLIENT_ID=pyro-api
+    - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_API_CLIENT_SECRET:-pyro-api-dev-secret}
     healthcheck:
       test: ["CMD-SHELL", "curl -X 'GET' 'http://pyro_api:5050/status' -H 'accept: application/json'"]
       interval: 20s
@@ -140,14 +146,19 @@ services:
     image: pyronear/pyro-api-init:latest
     environment:
     - API_URL=${API_URL}
-    - SUPERADMIN_LOGIN=${SUPERADMIN_LOGIN}
-    - SUPERADMIN_PWD=${SUPERADMIN_PWD}
+    # Admin token from the pyro-scripts service account (client credentials).
+    # Defaults match the realm export, so a .env from before Keycloak still works.
+    - KEYCLOAK_TOKEN_URL=${KEYCLOAK_TOKEN_URL:-http://keycloak:9310/realms/pyronear/protocol/openid-connect/token}
+    - KEYCLOAK_SCRIPTS_CLIENT_ID=${KEYCLOAK_SCRIPTS_CLIENT_ID:-pyro-scripts}
+    - KEYCLOAK_SCRIPTS_CLIENT_SECRET=${KEYCLOAK_SCRIPTS_CLIENT_SECRET:-pyro-scripts-dev-secret}
     - SLACK_HOOK=${SLACK_HOOK}
     volumes:
     - ./data/:/data/
     command: sh -c 'python /usr/local/bin/init_script.py && exit 0 || exit 1'
     depends_on:
       pyro_api:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
   frontend:
     image: pyronear/pyro-platform-react:latest
@@ -171,6 +182,11 @@ services:
       - tools
     ports:
       - 8889:8888
+    environment:
+    # Same service account as init_script; load_dotenv in the notebooks doesn't override these
+    - KEYCLOAK_TOKEN_URL=${KEYCLOAK_TOKEN_URL:-http://keycloak:9310/realms/pyronear/protocol/openid-connect/token}
+    - KEYCLOAK_SCRIPTS_CLIENT_ID=${KEYCLOAK_SCRIPTS_CLIENT_ID:-pyro-scripts}
+    - KEYCLOAK_SCRIPTS_CLIENT_SECRET=${KEYCLOAK_SCRIPTS_CLIENT_SECRET:-pyro-scripts-dev-secret}
     volumes:
       - ./containers/notebooks/app:/app/notebooks
       - ./data:/app/data
@@ -188,8 +204,6 @@ services:
       - db
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.3
-    profiles:
-      - tools
     ports:
       - "9310:9310"
     environment:
@@ -197,6 +211,10 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
       KC_HTTP_PORT: 9310
       KC_HTTPS_PORT: 8443
+      # Same issuer whether a token is requested by the browser (localhost) or a container (keycloak:9310)
+      KC_HOSTNAME: http://localhost:9310
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: true
+      KC_HEALTH_ENABLED: true
       KC_DB: dev-file
       KC_ENABLE_HTTPS: false
       KC_LOG_LEVEL: info
@@ -204,11 +222,20 @@ services:
       - "./containers/keycloak/realm:/opt/keycloak/data/import"
       - "./containers/keycloak/themes:/opt/keycloak/themes"
     healthcheck:
-      test: ["CMD-SHELL", "grep -q 'started' /opt/keycloak/data/log/server.log || exit 1"]
-      interval: 20s
+      # Readiness on the management port; the image has no curl, so speak HTTP over bash's /dev/tcp
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 10s
       timeout: 5s
-      retries: 6
-    command: start-dev --import-realm --log="console,file"
+      retries: 12
+      start_period: 20s
+    command: start-dev --import-realm
 
 volumes:
   rustfs_data:

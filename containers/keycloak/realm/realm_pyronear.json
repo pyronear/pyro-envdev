@@ -491,8 +491,6 @@
       "id": "e813b152-bb4d-4b1d-8f9b-ea62554a6abe",
       "username": "test07",
       "emailVerified": true,
-      "firstName": "User07",
-      "lastName": "Name",
       "email": "user07@mail.com",
       "attributes": {
         "pyro-organization": [
@@ -525,8 +523,6 @@
       "id": "aa6ec0f1-bbbb-426e-b4fb-414b1c114fd1",
       "username": "test77",
       "emailVerified": true,
-      "firstName": "User77",
-      "lastName": "Name",
       "email": "user77@mail.com",
       "attributes": {
         "pyro-organization": [
@@ -559,8 +555,6 @@
       "id": "564a1fd4-a04b-4eae-a2ba-b28d0f27c74f",
       "username": "test07-viewer",
       "emailVerified": true,
-      "firstName": "User07",
-      "lastName": "Name",
       "email": "user07viewer@mail.com",
       "attributes": {
         "pyro-organization": [
@@ -607,8 +601,6 @@
     {
       "username": "test-admin",
       "emailVerified": true,
-      "firstName": "Admin",
-      "lastName": "Pyronear",
       "email": "admin@mail.com",
       "attributes": {
         "pyro-organization": [
@@ -1999,7 +1991,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"pyro-organization\",\"displayName\":\"\",\"validations\":{},\"annotations\":{},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"pyro-organization\",\"displayName\":\"\",\"validations\":{},\"annotations\":{},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
           ]
         }
       }

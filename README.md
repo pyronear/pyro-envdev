@@ -57,7 +57,8 @@ make run
 
 ```bash
 make build
-make run-all
+make run
+make run-engine
 ```
 
 This launches everything, including the engine and the fake cameras playing the
@@ -85,6 +86,14 @@ docker compose logs -f engine
   ```bash
   make run-tools
   ```
+
+---
+
+## 🧪 End-to-end tests
+
+`make e2e SCENARIO=<name>` tears the stack down, brings up a fresh one (two fake cameras playing the scenario, the real camera API, engine, pyro-api and the frontend) and runs the pytest suite in `tests/e2e/` against it. It needs Docker and [`uv`](https://docs.astral.sh/uv/), and leaves the stack running afterwards for debugging (`make stop` cleans it).
+
+Whatever the outcome, `e2e-artifacts/` holds `junit.xml` (which assertion failed, open it first), `compose.log` (engine, camera API and fake camera logs) and `ps.txt` (container states). A run rewrites the tracked `data/credentials.json`, since init writes the camera tokens into it: do not commit that change. Scenarios need a fresh stack, because the API groups detections of the same pose for 2 hours, which is why `make e2e` always starts from `make stop`.
 
 ---
 

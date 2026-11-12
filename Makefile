@@ -7,6 +7,7 @@ help:
 	@echo "  build               Build local images in this repo"
 	@echo "  build-external      Build images in sibling repos"
 	@echo "  build-all           Build local and external images"
+	@echo "  build-e2e           Build only the local images the e2e needs (no notebooks)"
 	@echo "  fetch-scenario      Download scenario images (SCENARIO=smoke-then-clear)"
 	@echo "  run-backend         Start base services only"
 	@echo "  run-camera          Start only the fake cameras, to work on pyro-engine"
@@ -21,7 +22,8 @@ help:
 	@echo "  stop                Stop and remove all services and volumes"
 	@echo "  ps                  Show compose status"
 	@echo "  logs                Follow logs"
-	@echo "  test                Run pytest"
+	@echo "  test                Run the unit tests"
+	@echo "  e2e                 Fresh stack, then the end-to-end tests (SCENARIO=smoke-then-clear), artifacts in e2e-artifacts/"
 
 # -------------------------------------------------------------------
 # Init
@@ -38,6 +40,11 @@ init:
 build: fetch-scenario
 	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
 	docker build -f containers/notebooks/Dockerfile -t pyronear/notebooks:latest containers/notebooks/
+	docker build --build-context scenarios=data/scenarios -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:latest containers/fake_camera/
+
+# Same images as `build` minus notebooks, which the e2e does not run.
+build-e2e: fetch-scenario
+	docker build -f containers/init_script/Dockerfile -t pyronear/pyro-api-init:latest containers/init_script/
 	docker build --build-context scenarios=data/scenarios -f containers/fake_camera/Dockerfile -t pyronear/fake-camera:latest containers/fake_camera/
 
 # -------------------------------------------------------------------
@@ -62,11 +69,12 @@ run-backend:
 # Fake camera scenarios: definitions are in data/scenarios/<name>/scenario.json,
 # images come from the "scenarios" GitHub release.
 SCENARIO ?= smoke-then-clear
+export SCENARIO
 SCENARIOS_URL = https://github.com/pyronear/pyro-envdev/releases/download/scenarios
 # Downloads unless every camera of scenario.json already has frames.
 fetch-scenario:
 	@python3 -c "import glob, json, sys; d = 'data/scenarios/$(SCENARIO)'; \
-		sys.exit(any(not glob.glob(f'{d}/{c}/*.jpg') for c in json.load(open(f'{d}/scenario.json'))['cameras']))" || \
+		sys.exit(any(not glob.glob(f'{d}/{c}/**/*.jpg', recursive=True) for c in json.load(open(f'{d}/scenario.json'))['cameras']))" || \
 		(curl -fsSL $(SCENARIOS_URL)/$(SCENARIO).zip -o /tmp/$(SCENARIO).zip && \
 		unzip -oq /tmp/$(SCENARIO).zip -x '*/scenario.json' -d data/scenarios && rm /tmp/$(SCENARIO).zip)
 
@@ -122,4 +130,21 @@ logs:
 # -------------------------------------------------------------------
 
 test:
-	pytest -s tests/*
+	pytest -s tests --ignore=tests/e2e -m "not integration"
+
+# End-to-end: fresh stack (data/ is a bind mount, so the init marker survives `down -v`),
+# then the tests. Whatever fails, ps and the logs are dumped to e2e-artifacts/ and make
+# exits with the failing step's code. The stack is left up for debugging, `make stop` cleans.
+e2e:
+	$(MAKE) stop
+	rm -f data/.init_done
+	$(MAKE) init build-e2e
+	rm -rf e2e-artifacts && mkdir -p e2e-artifacts
+	@rc=0; \
+	docker compose --profile front --profile engine up -d --wait || rc=$$?; \
+	if [ $$rc -eq 0 ]; then \
+		uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e --junitxml=e2e-artifacts/junit.xml -ra --tb=short || rc=$$?; \
+	fi; \
+	docker compose ps -a > e2e-artifacts/ps.txt 2>&1; \
+	docker compose --profile front --profile engine logs --no-color > e2e-artifacts/compose.log 2>&1; \
+	exit $$rc

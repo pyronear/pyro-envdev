@@ -47,7 +47,7 @@ jobs:
       run: pip install -r tests/requirements.txt
 
     - name: launch tests
-      run: pytest tests/*
+      run: pytest tests --ignore=tests/e2e
 
     - name: Capture logs
       if: always()

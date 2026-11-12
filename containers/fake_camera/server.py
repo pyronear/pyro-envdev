@@ -9,7 +9,7 @@ ToPos, so snaps taken in place (autofocus) see the same frame. A camera never
 positioned (static) moves on every Snap.
 
 ``GET /scenario`` is not part of the Reolink API: it reports the camera state
-(preset, azimuth, frame, finished) so tests know where the scenario is.
+(scenario, preset, azimuth, frame, finished) so tests know where the scenario is.
 """
 
 import json
@@ -44,9 +44,10 @@ def reply(cmd, value=None, error=None):
 
 
 class Camera:
-    def __init__(self, scenario_dir, name):
+    def __init__(self, scenario_dir, name, scenario=None):
         meta = json.loads((scenario_dir / "scenario.json").read_text())
         self.name = name
+        self.scenario = scenario  # reported by /scenario
         # preset id -> real-world azimuth, informational only (see /scenario)
         self.azimuths = {
             int(k): float(v) for k, v in meta["cameras"][name]["poses"].items()
@@ -77,6 +78,7 @@ class Camera:
     def status(self):
         with self.lock:
             return {
+                "scenario": self.scenario,
                 "camera": self.name,
                 "preset": self.preset,
                 "azimuth": self.azimuths.get(self.preset),
@@ -207,6 +209,7 @@ def main():
     camera = Camera(
         Path(os.environ.get("SCENARIOS_DIR", "/scenarios")) / scenario,
         os.environ["CAMERA"],
+        scenario,
     )
     port = int(os.environ.get("PORT", "443"))
     here = Path(__file__).parent

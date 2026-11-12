@@ -5,6 +5,10 @@ data/images/
 data/models/
 # Written by init_script at the end of a successful run
 data/.init_done
+# Touched by the engine container (./data is mounted)
+data/heartbeat
+# Written by make e2e
+e2e-artifacts/
 *.pem
 # Byte-compiled / optimized / DLL files
 __pycache__/

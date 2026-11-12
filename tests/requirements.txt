@@ -1,4 +1,8 @@
+playwright==1.65.0
 psycopg2-binary==2.9.9
 pytest==9.0.3
+pytest-playwright==0.10.0
+pytest-timeout==2.4.0
 python-dotenv==1.2.2
 boto3==1.34.90
+requests==2.34.2

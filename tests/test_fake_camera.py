@@ -5,6 +5,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
+import pytest
 from dotenv import load_dotenv
 
 sys.path.insert(
@@ -75,14 +76,28 @@ def test_static_camera_moves_on_every_snap(tmp_path):
     assert cam.status()["finished"]
 
 
+def test_status_reports_the_scenario_name(tmp_path):
+    (tmp_path / "scenario.json").write_text(
+        json.dumps({"cameras": {"cam": {"poses": {"1": 0.0}}}})
+    )
+    (tmp_path / "cam").mkdir()
+    (tmp_path / "cam" / "000.jpg").write_bytes(b"frame0")
+    cam = Camera(tmp_path, "cam", "smoke-then-clear")
+    assert cam.status()["scenario"] == "smoke-then-clear"
+    assert Camera(tmp_path, "cam").status()["scenario"] is None
+
+
+@pytest.mark.integration
 def test_snap_returns_a_jpeg():
     assert call("Snap")[:2] == b"\xff\xd8"
 
 
+@pytest.mark.integration
 def test_wrong_password_is_rejected():
     assert call("Snap", auth="user=nobody&password=wrong&channel=0")[0]["code"] == 1
 
 
+@pytest.mark.integration
 def test_ptz_follows_presets():
     assert (
         call("PtzCtrl", {"channel": 0, "op": "ToPos", "id": 3, "speed": 50})[0]["code"]
@@ -101,6 +116,7 @@ def test_ptz_follows_presets():
     assert [p["id"] for p in presets if p["enable"]] == [1, 2, 3]
 
 
+@pytest.mark.integration
 def test_zoom_focus_values():
     zoom_focus = call("GetZoomFocus", {"channel": 0})[0]["value"]["ZoomFocus"]
     assert zoom_focus["focus"]["pos"] == 720

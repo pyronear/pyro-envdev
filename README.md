@@ -97,6 +97,18 @@ Whatever the outcome, `e2e-artifacts/` holds `junit.xml` (API tests) and `junit-
 
 A failing browser test leaves a trace and a screenshot in `e2e-artifacts/playwright/<test>/`: open the trace first with `uv run --python 3.12 --with-requirements tests/requirements.txt playwright show-trace e2e-artifacts/playwright/<test>/trace.zip` (DOM snapshots, network and console at every step). To run only the browser tests against a stack that is already up, with a visible browser: `SCENARIO=<name> uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e/ui --headed`. The first alert takes a few minutes to appear after the stack starts, the tests wait for it.
 
+**In CI.** `.github/workflows/e2e.yml` runs `make e2e` on pull requests that touch the tests, the scenarios, the containers or the stack definition, every night, and on demand (`workflow_dispatch`). The app repos (`pyro-api`, `new-pyro-platform`, `pyro-engine`) call it after pushing an image, with that image by digest, so a merge is tested against the latest of the others (images not given stay on `latest`):
+
+```yaml
+jobs:
+  e2e:
+    uses: pyronear/pyro-envdev/.github/workflows/e2e.yml@main
+    with:
+      api_image: pyronear/alert-api@sha256:<digest>
+```
+
+Inputs are `api_image`, `platform_image`, `engine_image`, `camera_api_image`, `scenario` (default `smoke-one-camera`), `scenarios_url` and `envdev_ref`. Every run uploads `e2e-artifacts/` and `versions.json` (the image references and digests, the envdev commit and the scenario checksum) as one artifact.
+
 ---
 
 ## 🔑 Access

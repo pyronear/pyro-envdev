@@ -1,7 +1,8 @@
 services:
   pyro_api:
     container_name: api
-    image: pyronear/alert-api:latest
+    # The four app images can be overridden by full reference (tag or digest), e.g. by the e2e workflow: API_IMAGE, PLATFORM_IMAGE, ENGINE_IMAGE, CAMERA_API_IMAGE
+    image: ${API_IMAGE:-pyronear/alert-api:latest}
     # No arm64 manifest on Docker Hub (Apple Silicon runs it emulated)
     platform: linux/amd64
     command: "sh -c 'alembic upgrade head && python app/db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 5050 --proxy-headers'"
@@ -106,7 +107,7 @@ services:
       timeout: 5s
       retries: 5
   pyro_camera_api:
-    image: pyronear/pyro-camera-api:latest
+    image: ${CAMERA_API_IMAGE:-pyronear/pyro-camera-api:latest}
     profiles:
       - engine
     environment:
@@ -144,7 +145,7 @@ services:
         max-size: 100m
         max-file: '5'
   engine:
-    image: pyronear/pyro-engine:latest
+    image: ${ENGINE_IMAGE:-pyronear/pyro-engine:latest}
     profiles:
       - engine
     environment:
@@ -216,7 +217,7 @@ services:
       pyro_api:
         condition: service_healthy
   frontend:
-    image: pyronear/pyro-platform-react:latest
+    image: ${PLATFORM_IMAGE:-pyronear/pyro-platform-react:latest}
     # Image is amd64 only (Apple Silicon runs it emulated)
     platform: linux/amd64
     profiles:

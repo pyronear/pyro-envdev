@@ -168,10 +168,14 @@ def diagnose(api):
 @pytest.fixture(scope="session")
 def first_alert(scenario, api, diagnose):
     def engine_never_polled(elapsed):
-        if elapsed >= ENGINE_START_TIMEOUT and all(
-            s.get("frame") == 0 for s in camera_states()
+        states = camera_states() if elapsed >= ENGINE_START_TIMEOUT else []
+        # a camera that does not answer (no "presets") is not proof of anything
+        if (
+            states
+            and all("presets" in s for s in states)
+            and not any(p["visits"] > 0 for s in states for p in s["presets"].values())
         ):
-            return f"pyro_camera_api never polled the fake cameras (no camera left frame 0 after {ENGINE_START_TIMEOUT:.0f} s)"
+            return f"pyro_camera_api never polled the fake cameras (no preset visited after {ENGINE_START_TIMEOUT:.0f} s)"
 
     def latest():
         r = api.get(f"{API_URL}/api/v1/alerts/unlabeled/latest", timeout=30)

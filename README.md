@@ -129,8 +129,8 @@ certificate, so the real `pyro_camera_api` and `engine` run against them unchang
 images shown one after the other, the last image being held forever. Each preset moves to
 its next image on its next visit by the patrol (the first `Snap` after a `ToPos`), so the
 engine sees every image once per preset, in order, whatever its timing; snaps taken in place,
-like the autofocus ones, see the same image. Every preset of a camera serves the same images
-for now.
+like the autofocus ones, see the same image. A preset can have its own images (see
+Scenario format), otherwise it plays the camera's.
 
 ```bash
 make run-engine                              # engine + camera API + fake cameras
@@ -145,8 +145,9 @@ Scenarios:
 * `false-positive`: false positives from the pyro-dataset val set, YOLO fires but the temporal model rejects them (no alert expected with temporal validation)
 
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
-current preset and azimuth, its frame index and `finished` once every visited preset shows the
-last frame.
+current preset and azimuth, its frame index and `finished` once every preset declared in
+`poses` shows its last frame (a preset never visited is not finished). A `presets` block gives the
+visits, frame and frames of each preset.
 
 The image embeds `smoke-then-clear`, so it also runs alone, without the `data/scenarios`
 volume (used by pi-manager-template on a test station).
@@ -166,7 +167,12 @@ data/scenarios/smoke-then-clear/
   scenario.json          # {"cameras": {"<name>": {"poses": {"<preset>": <azimuth>}}}}
   croix-augas-01/        # frames of fakecam-1, in order: 000.jpg, 001.jpg, ...
   nemours-02/            # frames of fakecam-2
+  croix-augas-01/3/      # optional: frames of preset 3 only (key of "poses"), 000.jpg, ...
 ```
+
+A preset without a folder plays the camera-level frames; a preset with neither makes the
+fake camera refuse to start. `--preset 3` of `make_scenario.py` writes into `<camera>/3/` the
+sequence seen on the pose whose `patrol_id` is 3 in the alert.
 
 Camera names and presets match `data/csv/API_DATA_DEV - cameras.csv` / `poses.csv`, so
 the init script gives each fake camera its token and the engine finds its poses.

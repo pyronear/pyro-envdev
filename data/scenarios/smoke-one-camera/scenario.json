@@ -1,0 +1,13 @@
+{
+  "description": "Smoke on preset 3 of croix-augas-01 only (18 frames of prod alert 49767, then a clear view held forever), every other pose of both cameras holds a clear view. Expected: exactly one alert, from one sequence on that pose.",
+  "cameras": {
+    "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},
+    "nemours-02": {"poses": {"0": 245.9, "1": 292.4, "2": 339.4, "3": 25.4}}
+  },
+  "expected": {
+    "alerts": 1,
+    "sequences": [{"camera": "croix-augas-01", "preset": "3", "min_detections": 7}],
+    "location": null,
+    "timeout_s": 900
+  }
+}

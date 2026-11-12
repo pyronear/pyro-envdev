@@ -3,5 +3,18 @@
   "cameras": {
     "croix-augas-01": {"poses": {"1": 326.5, "2": 13.2, "3": 59.8}},
     "nemours-02": {"poses": {"0": 245.9, "1": 292.4, "2": 339.4, "3": 25.4}}
+  },
+  "expected": {
+    "alerts": 5,
+    "sequences": [
+      {"camera": "croix-augas-01", "preset": "1", "min_detections": 15},
+      {"camera": "croix-augas-01", "preset": "2", "min_detections": 15},
+      {"camera": "croix-augas-01", "preset": "3", "min_detections": 15},
+      {"camera": "nemours-02", "preset": "0", "min_detections": 15},
+      {"camera": "nemours-02", "preset": "1", "min_detections": 15},
+      {"camera": "nemours-02", "preset": "2", "min_detections": 15},
+      {"camera": "nemours-02", "preset": "3", "min_detections": 15}
+    ],
+    "timeout_s": 2400
   }
 }

@@ -57,7 +57,8 @@ make run
 
 ```bash
 make build
-make run-all
+make run
+make run-engine
 ```
 
 This launches everything, including the engine and the fake cameras playing the
@@ -85,6 +86,28 @@ docker compose logs -f engine
   ```bash
   make run-tools
   ```
+
+---
+
+## 🧪 End-to-end tests
+
+`make e2e SCENARIO=<name>` tears the stack down, brings up a fresh one (two fake cameras playing the scenario, the real camera API, engine, pyro-api and the frontend) and runs the pytest suite in `tests/e2e/` against it: the API tests first, then the browser tests in `tests/e2e/ui/` (Playwright, Chromium, logged in once as the same user as the API tests). Install the browser once per machine with `make e2e-install`. It needs Docker and [`uv`](https://docs.astral.sh/uv/), and leaves the stack running afterwards for debugging (`make stop` cleans it).
+
+Whatever the outcome, `e2e-artifacts/` holds `junit.xml` (API tests) and `junit-ui.xml` (browser tests), which say which assertion failed (open them first), `compose.log` (engine, camera API and fake camera logs) and `ps.txt` (container states). A run rewrites the tracked `data/credentials.json`, since init writes the camera tokens into it: do not commit that change. Scenarios need a fresh stack, because the API groups detections of the same pose for 2 hours, which is why `make e2e` always starts from `make stop`.
+
+A failing browser test leaves a trace and a screenshot in `e2e-artifacts/playwright/<test>/`: open the trace first with `uv run --python 3.12 --with-requirements tests/requirements.txt playwright show-trace e2e-artifacts/playwright/<test>/trace.zip` (DOM snapshots, network and console at every step). To run only the browser tests against a stack that is already up, with a visible browser: `SCENARIO=<name> uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e/ui --headed`. The first alert takes a few minutes to appear after the stack starts, the tests wait for it.
+
+**In CI.** `.github/workflows/e2e.yml` runs `make e2e` on pull requests that touch the tests, the scenarios, the containers or the stack definition, every night, and on demand (`workflow_dispatch`). The app repos (`pyro-api`, `new-pyro-platform`, `pyro-engine`) call it after pushing an image, with that image by digest, so a merge is tested against the latest of the others (images not given stay on `latest`):
+
+```yaml
+jobs:
+  e2e:
+    uses: pyronear/pyro-envdev/.github/workflows/e2e.yml@main
+    with:
+      api_image: pyronear/alert-api@sha256:<digest>
+```
+
+Inputs are `api_image`, `platform_image`, `engine_image`, `camera_api_image`, `scenario` (default `smoke-one-camera`), `scenarios_url` and `envdev_ref`. Every run uploads `e2e-artifacts/` and `versions.json` (the image references and digests, the envdev commit and the scenario checksum) as one artifact.
 
 ---
 
@@ -120,8 +143,8 @@ certificate, so the real `pyro_camera_api` and `engine` run against them unchang
 images shown one after the other, the last image being held forever. Each preset moves to
 its next image on its next visit by the patrol (the first `Snap` after a `ToPos`), so the
 engine sees every image once per preset, in order, whatever its timing; snaps taken in place,
-like the autofocus ones, see the same image. Every preset of a camera serves the same images
-for now.
+like the autofocus ones, see the same image. A preset can have its own images (see
+Scenario format), otherwise it plays the camera's.
 
 ```bash
 make run-engine                              # engine + camera API + fake cameras
@@ -133,11 +156,15 @@ Scenarios:
 
 * `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then a clear view
 * `never-smoke`: both cameras hold a clear view
+* `smoke-one-camera`: smoke on preset 3 of `croix-augas-01` only, every other pose clear (one alert expected)
 * `false-positive`: false positives from the pyro-dataset val set, YOLO fires but the temporal model rejects them (no alert expected with temporal validation)
 
+`make fetch-scenario` downloads from the `scenarios` release by default, `SCENARIOS_URL=<url>` points it at another release.
+
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
-current preset and azimuth, its frame index and `finished` once every visited preset shows the
-last frame.
+current preset and azimuth, its frame index and `finished` once every preset declared in
+`poses` shows its last frame (a preset never visited is not finished). A `presets` block gives the
+visits, frame and frames of each preset.
 
 The image embeds `smoke-then-clear`, so it also runs alone, without the `data/scenarios`
 volume (used by pi-manager-template on a test station).
@@ -157,7 +184,12 @@ data/scenarios/smoke-then-clear/
   scenario.json          # {"cameras": {"<name>": {"poses": {"<preset>": <azimuth>}}}}
   croix-augas-01/        # frames of fakecam-1, in order: 000.jpg, 001.jpg, ...
   nemours-02/            # frames of fakecam-2
+  croix-augas-01/3/      # optional: frames of preset 3 only (key of "poses"), 000.jpg, ...
 ```
+
+A preset without a folder plays the camera-level frames; a preset with neither makes the
+fake camera refuse to start. `--preset 3` of `make_scenario.py` writes into `<camera>/3/` the
+sequence seen on the pose whose `patrol_id` is 3 in the alert.
 
 Camera names and presets match `data/csv/API_DATA_DEV - cameras.csv` / `poses.csv`, so
 the init script gives each fake camera its token and the engine finds its poses.

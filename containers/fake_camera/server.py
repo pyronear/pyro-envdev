@@ -3,13 +3,19 @@
 Answers the Reolink HTTP API (``/cgi-bin/api.cgi?cmd=...``) the way the real
 ``pyro_camera_api`` Reolink adapter expects, serving the frames of a scenario.
 One process is one camera: ``SCENARIO`` and ``CAMERA`` select
-``<SCENARIOS_DIR>/<SCENARIO>/<CAMERA>/*.jpg`` (sorted, last frame held).
-Each preset moves to its next frame on its next visit: the first Snap after a
-ToPos, so snaps taken in place (autofocus) see the same frame. A camera never
-positioned (static) moves on every Snap.
+``<SCENARIOS_DIR>/<SCENARIO>/<CAMERA>/``. A preset (a key of ``poses`` in
+``scenario.json``) plays the frames of ``<CAMERA>/<preset>/*.jpg`` (sorted, last
+frame held), or else the camera-level ``<CAMERA>/*.jpg``, so a scenario can put
+smoke on one pose only. Each preset keeps its own position: it moves to its next
+frame on its next visit, the first Snap after a ToPos, so snaps taken in place
+(autofocus) see the same frame. A camera never positioned (static) plays the
+camera-level frames and moves on every Snap.
 
 ``GET /scenario`` is not part of the Reolink API: it reports the camera state
-(preset, azimuth, frame, finished) so tests know where the scenario is.
+(scenario, preset, azimuth, frame and frames of the current preset, finished,
+and visits, frame and frames of every declared preset) so tests know where the
+scenario is. ``finished`` means every declared preset is on its last frame, a
+preset never visited counting as not finished.
 """
 
 import json
@@ -44,19 +50,37 @@ def reply(cmd, value=None, error=None):
 
 
 class Camera:
-    def __init__(self, scenario_dir, name):
+    def __init__(self, scenario_dir, name, scenario=None):
         meta = json.loads((scenario_dir / "scenario.json").read_text())
         self.name = name
+        self.scenario = scenario  # reported by /scenario
         # preset id -> real-world azimuth, informational only (see /scenario)
         self.azimuths = {
             int(k): float(v) for k, v in meta["cameras"][name]["poses"].items()
         }
-        # ponytail: every preset serves the same frames; per-preset folders if needed
-        self.frames = sorted((scenario_dir / name).glob("*.jpg"))
-        if not self.frames:
+        camera_dir = scenario_dir / name
+        # Camera-level frames: the fallback of a preset without a folder, and what a
+        # Snap sees before any ToPos (a static camera).
+        self.frames = sorted(camera_dir.glob("*.jpg"))
+        # preset id -> its own frames, or the camera-level ones
+        self.preset_frames = {}
+        for preset in self.azimuths:
+            own = sorted((camera_dir / str(preset)).glob("*.jpg"))
+            if not (own or self.frames):
+                raise SystemExit(
+                    f"no frames for scenario {scenario or scenario_dir.name}, "
+                    f"camera {name}, preset {preset}: expected "
+                    f"{camera_dir / str(preset)}/*.jpg or {camera_dir}/*.jpg, "
+                    "run `make fetch-scenario` first"
+                )
+            self.preset_frames[preset] = own or self.frames
+        if not self.preset_frames and not self.frames:
             raise SystemExit(
-                f"no frames in {scenario_dir / name}, run `make fetch-scenario` first"
+                f"no frames in {camera_dir}, run `make fetch-scenario` first"
             )
+        if not self.frames:
+            # A Snap before any ToPos has no camera-level frames: use the first preset's
+            self.frames = self.preset_frames[min(self.preset_frames)]
         self.lock = threading.Lock()
         self.preset = None  # unknown until a ToPos; stays None on a static camera
         self.visits = {}  # preset -> visits that took a Snap
@@ -64,27 +88,47 @@ class Camera:
         self.enabled = set(self.azimuths)
         self.zoom, self.focus, self.autofocus_disabled = 0, 720, 0
 
+    def _frames(self, preset):
+        return self.preset_frames.get(preset, self.frames)
+
     def _frame(self, preset):
-        return frame_index(self.visits.get(preset, 0), len(self.frames))
+        return frame_index(self.visits.get(preset, 0), len(self._frames(preset)))
+
+    def _on_last_frame(self, preset):
+        return self.visits.get(preset, 0) >= len(self._frames(preset))
 
     def snap(self):
         with self.lock:
             if self.arrived or self.preset is None:
                 self.visits[self.preset] = self.visits.get(self.preset, 0) + 1
                 self.arrived = False
-            return self.frames[self._frame(self.preset)].read_bytes()
+            return self._frames(self.preset)[self._frame(self.preset)].read_bytes()
 
     def status(self):
         with self.lock:
             return {
+                "scenario": self.scenario,
                 "camera": self.name,
                 "preset": self.preset,
                 "azimuth": self.azimuths.get(self.preset),
                 "frame": self._frame(self.preset),
-                "frames": len(self.frames),
-                "finished": bool(self.visits)
-                and all(self._frame(p) == len(self.frames) - 1 for p in self.visits),
+                "frames": len(self._frames(self.preset)),
+                "finished": self._finished(),
+                "presets": {
+                    str(p): {
+                        "visits": self.visits.get(p, 0),
+                        "frame": self._frame(p),
+                        "frames": len(self._frames(p)),
+                    }
+                    for p in sorted(self.preset_frames)
+                },
             }
+
+    def _finished(self):
+        if self.preset_frames:
+            # Snaps before any ToPos (preset None) neither block nor trigger this
+            return all(self._on_last_frame(p) for p in self.preset_frames)
+        return bool(self.visits) and all(self._on_last_frame(p) for p in self.visits)
 
     def command(self, cmd, param):
         with self.lock:
@@ -207,6 +251,7 @@ def main():
     camera = Camera(
         Path(os.environ.get("SCENARIOS_DIR", "/scenarios")) / scenario,
         os.environ["CAMERA"],
+        scenario,
     )
     port = int(os.environ.get("PORT", "443"))
     here = Path(__file__).parent
@@ -219,11 +264,11 @@ def main():
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
     logging.info(
         "fake camera %s plays scenario %s: "
-        "%d frames, one per preset visit, presets %s, port %d",
+        "one frame per preset visit, frames per preset %s, port %d",
         camera.name,
         scenario,
-        len(camera.frames),
-        sorted(camera.enabled),
+        {p: len(f) for p, f in sorted(camera.preset_frames.items())}
+        or len(camera.frames),
         port,
     )
     httpd.serve_forever()

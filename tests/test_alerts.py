@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def db_connection():

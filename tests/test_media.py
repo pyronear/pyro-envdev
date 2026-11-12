@@ -6,6 +6,8 @@ import pytest
 # Load environment variables from .env file
 load_dotenv()
 
+pytestmark = pytest.mark.integration
+
 # Tests run on the host: prefer the public endpoint, `rustfs` is compose-only.
 s3_endpoint_url = (os.getenv("S3_PROXY_URL") or os.getenv("S3_ENDPOINT_URL")) + "/"
 s3_access_key = os.getenv("S3_ACCESS_KEY")

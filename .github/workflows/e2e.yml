@@ -1,0 +1,184 @@
+name: e2e
+
+# Reusable: pyro-api, new-pyro-platform and pyro-engine call it after pushing an image,
+# with that image by digest, to test it against the latest of the others.
+on:
+  workflow_call:
+    inputs:
+      api_image:
+        description: pyro-api image (pyronear/alert-api), by digest
+        type: string
+        default: ''
+      platform_image:
+        description: new-pyro-platform image (pyronear/pyro-platform-react), by digest
+        type: string
+        default: ''
+      engine_image:
+        description: pyro-engine image (pyronear/pyro-engine), by digest
+        type: string
+        default: ''
+      camera_api_image:
+        description: pyro-engine camera API image (pyronear/pyro-camera-api), by digest
+        type: string
+        default: ''
+      envdev_ref:
+        description: pyro-envdev ref providing the tests and the fake camera
+        type: string
+        default: main
+      scenario:
+        description: Fake camera scenario
+        type: string
+        default: smoke-one-camera
+      scenarios_url:
+        description: Release URL of the scenario zips (default is the Makefile one)
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      api_image:
+        description: pyro-api image (pyronear/alert-api), by digest
+        type: string
+        default: ''
+      platform_image:
+        description: new-pyro-platform image (pyronear/pyro-platform-react), by digest
+        type: string
+        default: ''
+      engine_image:
+        description: pyro-engine image (pyronear/pyro-engine), by digest
+        type: string
+        default: ''
+      camera_api_image:
+        description: pyro-engine camera API image (pyronear/pyro-camera-api), by digest
+        type: string
+        default: ''
+      envdev_ref:
+        description: pyro-envdev ref providing the tests and the fake camera
+        type: string
+        default: main
+      scenario:
+        description: Fake camera scenario
+        type: string
+        default: smoke-one-camera
+      scenarios_url:
+        description: Release URL of the scenario zips (default is the Makefile one)
+        type: string
+        default: ''
+  pull_request:
+    paths:
+      - tests/**
+      - data/scenarios/**
+      - containers/**
+      - scripts/**
+      - docker-compose.yml
+      - Makefile
+      - .github/workflows/e2e.yml
+  schedule:
+    # Nightly, well away from midnight UTC: the platform only shows the alerts that started
+    # "today", so a run must not cross midnight or its alert disappears.
+    - cron: '17 3 * * *'
+
+# A new run on the same ref replaces the one in progress. The e2e- prefix keeps the group
+# apart from the caller's own concurrency groups when this runs as a called workflow.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Forks keep pull_request and workflow_dispatch, the nightly run is upstream only.
+    if: github.event_name != 'schedule' || github.repository == 'pyronear/pyro-envdev'
+    steps:
+      # `inputs` only exists on workflow_call and workflow_dispatch: every value gets an
+      # explicit fallback here, and the rest of the job reads these variables only.
+      - name: Resolve inputs
+        env:
+          IN_SCENARIO: ${{ inputs.scenario }}
+          IN_API: ${{ inputs.api_image }}
+          IN_PLATFORM: ${{ inputs.platform_image }}
+          IN_ENGINE: ${{ inputs.engine_image }}
+          IN_CAMERA_API: ${{ inputs.camera_api_image }}
+          IN_SCENARIOS_URL: ${{ inputs.scenarios_url }}
+        run: |
+          echo "SCENARIO=${IN_SCENARIO:-smoke-one-camera}" >> "$GITHUB_ENV"
+          # Only non-empty values are exported: a variable set but empty would beat the
+          # defaults in docker-compose.yml and the Makefile (SCENARIOS_URL ?=).
+          [ -z "${IN_API:-}" ] || echo "API_IMAGE=$IN_API" >> "$GITHUB_ENV"
+          [ -z "${IN_PLATFORM:-}" ] || echo "PLATFORM_IMAGE=$IN_PLATFORM" >> "$GITHUB_ENV"
+          [ -z "${IN_ENGINE:-}" ] || echo "ENGINE_IMAGE=$IN_ENGINE" >> "$GITHUB_ENV"
+          [ -z "${IN_CAMERA_API:-}" ] || echo "CAMERA_API_IMAGE=$IN_CAMERA_API" >> "$GITHUB_ENV"
+          [ -z "${IN_SCENARIOS_URL:-}" ] || echo "SCENARIOS_URL=$IN_SCENARIOS_URL" >> "$GITHUB_ENV"
+
+      # A called workflow runs in the caller's context, so the default checkout would fetch the
+      # caller's repo. Inside pyro-envdev (upstream or a fork) test the code of this very run
+      # (on a pull request, its merge commit), unless a workflow_dispatch asked for another
+      # envdev_ref. From an app repo, fetch pyro-envdev at the requested ref.
+      - name: Check out pyro-envdev
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ endsWith(github.repository, '/pyro-envdev') && github.repository || 'pyronear/pyro-envdev' }}
+          ref: ${{ endsWith(github.repository, '/pyro-envdev') && ((github.event_name == 'workflow_dispatch' && inputs.envdev_ref != '' && inputs.envdev_ref != 'main') && inputs.envdev_ref || github.sha) || (inputs.envdev_ref || 'main') }}
+
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Pull the app images
+        run: |
+          # compose reads .env; an unset *_IMAGE falls back to the latest tag in docker-compose.yml
+          make init
+          docker compose --profile front --profile engine pull pyro_api frontend engine pyro_camera_api
+
+      - name: Record versions.json
+        run: |
+          # The default scenario URL lives in the Makefile, read it from there
+          default_url=$(sed -n 's/^SCENARIOS_URL ?= //p' Makefile)
+          [ -n "$default_url" ] || { echo "SCENARIOS_URL default not found in Makefile" >&2; exit 1; }
+          url="${SCENARIOS_URL:-$default_url}"
+          curl -fsSL "$url/$SCENARIO.zip" -o scenario.zip
+          scenario_sha=$(sha256sum scenario.zip | cut -d ' ' -f 1)
+          rm scenario.zip
+          config=$(docker compose --profile front --profile engine config --format json)
+          image() { jq -r --arg s "$1" '.services[$s].image' <<< "$config"; }
+          digest() { docker image inspect --format '{{index .RepoDigests 0}}' "$1"; }
+          jq -n \
+            --arg api "$(image pyro_api)" --arg api_digest "$(digest "$(image pyro_api)")" \
+            --arg platform "$(image frontend)" --arg platform_digest "$(digest "$(image frontend)")" \
+            --arg engine "$(image engine)" --arg engine_digest "$(digest "$(image engine)")" \
+            --arg camera "$(image pyro_camera_api)" --arg camera_digest "$(digest "$(image pyro_camera_api)")" \
+            --arg envdev "$(git rev-parse HEAD)" --arg scenario "$SCENARIO" \
+            --arg url "$url" --arg sha "$scenario_sha" \
+            '{
+              images: {
+                pyro_api: {reference: $api, digest: $api_digest},
+                frontend: {reference: $platform, digest: $platform_digest},
+                engine: {reference: $engine, digest: $engine_digest},
+                pyro_camera_api: {reference: $camera, digest: $camera_digest}
+              },
+              envdev_commit: $envdev,
+              scenario: $scenario,
+              scenarios_url: $url,
+              scenario_zip_sha256: $sha
+            }' > versions.json
+          cat versions.json
+
+      - name: Install the browser
+        run: make e2e-install E2E_INSTALL_ARGS=--with-deps
+
+      - name: Run the e2e
+        run: |
+          args=("SCENARIO=$SCENARIO")
+          [ -z "${SCENARIOS_URL:-}" ] || args+=("SCENARIOS_URL=$SCENARIOS_URL")
+          make e2e "${args[@]}"
+
+      - name: Upload the artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e-artifacts/
+            versions.json
+          if-no-files-found: warn

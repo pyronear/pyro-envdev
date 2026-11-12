@@ -70,7 +70,7 @@ run-backend:
 # images come from the "scenarios" GitHub release.
 SCENARIO ?= smoke-then-clear
 export SCENARIO
-SCENARIOS_URL = https://github.com/pyronear/pyro-envdev/releases/download/scenarios
+SCENARIOS_URL ?= https://github.com/pyronear/pyro-envdev/releases/download/scenarios
 # Downloads unless every camera of scenario.json already has frames.
 fetch-scenario:
 	@python3 -c "import glob, json, sys; d = 'data/scenarios/$(SCENARIO)'; \

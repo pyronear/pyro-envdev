@@ -142,7 +142,10 @@ Scenarios:
 
 * `smoke-then-clear` (default): real wildfire seen by both cameras, 40 frames of smoke then a clear view
 * `never-smoke`: both cameras hold a clear view
+* `smoke-one-camera`: smoke on preset 3 of `croix-augas-01` only, every other pose clear (one alert expected)
 * `false-positive`: false positives from the pyro-dataset val set, YOLO fires but the temporal model rejects them (no alert expected with temporal validation)
+
+`make fetch-scenario` downloads from the `scenarios` release by default, `SCENARIOS_URL=<url>` points it at another release.
 
 `GET https://localhost:8443/scenario` (8444 for `fakecam-2`) reports the camera state:
 current preset and azimuth, its frame index and `finished` once every preset declared in

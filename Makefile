@@ -24,6 +24,7 @@ help:
 	@echo "  logs                Follow logs"
 	@echo "  test                Run the unit tests"
 	@echo "  e2e                 Fresh stack, then the end-to-end tests (SCENARIO=smoke-then-clear), artifacts in e2e-artifacts/"
+	@echo "  e2e-install         Install the Chromium the browser tests use (once per machine)"
 
 # -------------------------------------------------------------------
 # Init
@@ -132,18 +133,26 @@ logs:
 test:
 	pytest -s tests --ignore=tests/e2e -m "not integration"
 
+# Chromium for the browser tests, once per machine. CI passes E2E_INSTALL_ARGS=--with-deps.
+E2E_INSTALL_ARGS ?=
+e2e-install:
+	uv run --python 3.12 --with-requirements tests/requirements.txt playwright install chromium $(E2E_INSTALL_ARGS)
+
 # End-to-end: fresh stack (data/ is a bind mount, so the init marker survives `down -v`),
-# then the tests. Whatever fails, ps and the logs are dumped to e2e-artifacts/ and make
-# exits with the failing step's code. The stack is left up for debugging, `make stop` cleans.
+# then the API tests and the browser tests (both run, the first failing code wins). Whatever
+# fails, ps and the logs are dumped to e2e-artifacts/ and make exits with the failing step's
+# code. The stack is left up for debugging, `make stop` cleans.
 e2e:
 	$(MAKE) stop
 	rm -f data/.init_done
 	$(MAKE) init build-e2e
 	rm -rf e2e-artifacts && mkdir -p e2e-artifacts
-	@rc=0; \
+	@rc=0; ui=0; \
 	docker compose --profile front --profile engine up -d --wait || rc=$$?; \
 	if [ $$rc -eq 0 ]; then \
-		uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e --junitxml=e2e-artifacts/junit.xml -ra --tb=short || rc=$$?; \
+		uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e --ignore=tests/e2e/ui --junitxml=e2e-artifacts/junit.xml -ra --tb=short || rc=$$?; \
+		uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e/ui --junitxml=e2e-artifacts/junit-ui.xml -ra --tb=short --tracing retain-on-failure --screenshot only-on-failure --output e2e-artifacts/playwright || ui=$$?; \
+		[ $$rc -ne 0 ] || rc=$$ui; \
 	fi; \
 	docker compose ps -a > e2e-artifacts/ps.txt 2>&1; \
 	docker compose --profile front --profile engine logs --no-color > e2e-artifacts/compose.log 2>&1; \

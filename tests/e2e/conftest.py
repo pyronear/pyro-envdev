@@ -132,13 +132,19 @@ def _new_session():
     return session
 
 
-@pytest.fixture(scope="session")
-def api():
+def e2e_credentials():
+    """(user, password) the e2e tests log in with: E2E_USER / E2E_PASSWORD, else test77 from the dev users CSV."""
     user, password = os.environ.get("E2E_USER"), os.environ.get("E2E_PASSWORD")
     if not user:
         with open(ROOT / "data" / "csv" / "API_DATA_DEV - users.csv") as f:
             row = next(r for r in csv.DictReader(f) if r["login"] == "test77")
         user, password = row["login"], row["password"]
+    return user, password
+
+
+@pytest.fixture(scope="session")
+def api():
+    user, password = e2e_credentials()
     session = _new_session()
     r = session.post(
         f"{API_URL}/api/v1/login/creds",

@@ -91,9 +91,11 @@ docker compose logs -f engine
 
 ## 🧪 End-to-end tests
 
-`make e2e SCENARIO=<name>` tears the stack down, brings up a fresh one (two fake cameras playing the scenario, the real camera API, engine, pyro-api and the frontend) and runs the pytest suite in `tests/e2e/` against it. It needs Docker and [`uv`](https://docs.astral.sh/uv/), and leaves the stack running afterwards for debugging (`make stop` cleans it).
+`make e2e SCENARIO=<name>` tears the stack down, brings up a fresh one (two fake cameras playing the scenario, the real camera API, engine, pyro-api and the frontend) and runs the pytest suite in `tests/e2e/` against it: the API tests first, then the browser tests in `tests/e2e/ui/` (Playwright, Chromium, logged in once as the same user as the API tests). Install the browser once per machine with `make e2e-install`. It needs Docker and [`uv`](https://docs.astral.sh/uv/), and leaves the stack running afterwards for debugging (`make stop` cleans it).
 
-Whatever the outcome, `e2e-artifacts/` holds `junit.xml` (which assertion failed, open it first), `compose.log` (engine, camera API and fake camera logs) and `ps.txt` (container states). A run rewrites the tracked `data/credentials.json`, since init writes the camera tokens into it: do not commit that change. Scenarios need a fresh stack, because the API groups detections of the same pose for 2 hours, which is why `make e2e` always starts from `make stop`.
+Whatever the outcome, `e2e-artifacts/` holds `junit.xml` (API tests) and `junit-ui.xml` (browser tests), which say which assertion failed (open them first), `compose.log` (engine, camera API and fake camera logs) and `ps.txt` (container states). A run rewrites the tracked `data/credentials.json`, since init writes the camera tokens into it: do not commit that change. Scenarios need a fresh stack, because the API groups detections of the same pose for 2 hours, which is why `make e2e` always starts from `make stop`.
+
+A failing browser test leaves a trace and a screenshot in `e2e-artifacts/playwright/<test>/`: open the trace first with `uv run --python 3.12 --with-requirements tests/requirements.txt playwright show-trace e2e-artifacts/playwright/<test>/trace.zip` (DOM snapshots, network and console at every step). To run only the browser tests against a stack that is already up, with a visible browser: `SCENARIO=<name> uv run --python 3.12 --with-requirements tests/requirements.txt pytest tests/e2e/ui --headed`. The first alert takes a few minutes to appear after the stack starts, the tests wait for it.
 
 ---
 
